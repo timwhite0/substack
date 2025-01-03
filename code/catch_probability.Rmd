@@ -73,7 +73,7 @@ data_final <- read_csv("../data/of_catch_prob_2024.csv")
 jan2_1 <- data_final %>%
             ggplot(aes(x = start_pos_x, y = start_pos_y)) +
             geom_point(col = "steelblue4", size = 2, shape = 19) +
-            labs(title = "Starting field positions on all balls hit to qualified CFs in 2024",
+            labs(title = "Starting positions on all balls hit to qualified OFs in 2024",
                  x = "Horizontal distance from home plate (ft)",
                  y = "Vertical distance from home plate (ft)") +
             theme_linedraw()
@@ -87,7 +87,7 @@ ggsave("../figures/jan2_1.png", plot = jan2_1)
 jan2_2 <- data_final %>%
             ggplot(aes(x = start_pos_x, y = start_pos_y)) +
             geom_point(col = "steelblue4", size = 2, shape = 19, alpha = 0.025) +
-            labs(title = "Starting field positions on all balls hit to qualified OFs in 2024",
+            labs(title = "Starting positions on all balls hit to qualified OFs in 2024",
                  x = "Horizontal distance from home plate (ft)",
                  y = "Vertical distance from home plate (ft)") +
             theme_linedraw()
@@ -102,7 +102,7 @@ jan2_3 <- data_final %>%
             filter(pos == 8) %>%
             ggplot(aes(x = start_pos_x, y = start_pos_y)) +
             geom_point(col = "steelblue4", size = 2, shape = 19, alpha = 0.05) +
-            labs(title = "Starting field positions on all balls hit to qualified CFs in 2024",
+            labs(title = "Starting positions on all balls hit to qualified CFs in 2024",
                  x = "Horizontal distance from home plate (ft)",
                  y = "Vertical distance from home plate (ft)") +
             theme_linedraw()
