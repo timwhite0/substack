@@ -17,7 +17,7 @@ library(rjson)
 
 
 
-# Load in data
+# Scrape data
 
 We scrape individual play data for every fly ball hit to a qualified outfielder during the 2024 season. This chunk only needs to be run once.
 ```{r eval = FALSE}
@@ -67,6 +67,9 @@ data_final <- read_csv("../data/of_catch_prob_2024.csv")
 ```
 
 
+
+\newpage
+
 # January 2nd
 
 ```{r}
@@ -114,7 +117,70 @@ ggsave("../figures/jan2_3.png", plot = jan2_3)
 
 
 
+\newpage
 
+# January 4th
+
+```{r}
+single_game_oaa <- data_final %>%
+                    group_by(game_pk, name_display_first_last) %>%
+                    summarize(oaa = sum(out * (1 - catch_rate) - (1 - out) * catch_rate),
+                              opportunities = n(),
+                              catches = sum(out),
+                              stars5_opps = sum(stars == 5),
+                              stars5_catches = sum(stars == 5 & out == 1),
+                              stars4_opps = sum(stars == 4),
+                              stars4_catches = sum(stars == 4 & out == 1),
+                              stars3_opps = sum(stars == 3),
+                              stars3_catches = sum(stars == 3 & out == 1),
+                              stars2_opps = sum(stars == 2),
+                              stars2_catches = sum(stars == 2 & out == 1),
+                              stars1_opps = sum(stars == 1),
+                              stars1_catches = sum(stars == 1 & out == 1),
+                              stars0_opps = sum(stars == 0),
+                              stars0_catches = sum(stars == 0 & out == 1),
+                              .groups = "drop")
+```
+
+```{r}
+single_game_oaa %>%
+  arrange(desc(oaa)) %>%
+  head(10)
+```
+
+```{r}
+single_game_oaa %>%
+  arrange(oaa) %>%
+  head(10)
+```
+
+
+
+\newpage
+
+# Later
+
+```{r}
+data_final %>%
+  ggplot(aes(x = distance, y = hang_time, col = catch_rate)) +
+    geom_point(alpha = 0.1)
+```
+
+```{r}
+data_final %>%
+  filter(stars <= 5) %>%
+  mutate(stars = as.factor(stars)) %>%
+  ggplot(aes(x = distance, y = hang_time, col = stars)) +
+    geom_point(alpha = 0.1) +
+    facet_grid(rows = vars(wall), cols = vars(back))
+
+data_final %>%
+  filter(stars <= 5) %>%
+  mutate(stars = as.factor(stars)) %>%
+  ggplot(aes(x = distance, y = hang_time, col = catch_rate)) +
+    geom_point(alpha = 0.1) +
+    facet_grid(rows = vars(wall), cols = vars(back))
+```
 
 
 
