@@ -19,7 +19,7 @@ library(rjson)
 
 # Scrape data
 
-We scrape individual play data for every fly ball hit to a qualified outfielder during the 2024 season. This chunk only needs to be run once.
+We scrape individual play data for every fly ball hit to an outfielder during the 2024 season. This chunk only needs to be run once.
 ```{r eval = FALSE}
 # Outfielders' player IDs
 playerIDs <- read_csv("../data/of_playerIDs_2024.csv") %>% select(player_id)
@@ -158,6 +158,24 @@ single_game_oaa %>%
 single_game_oaa %>%
   arrange(oaa) %>%
   head(10)
+```
+
+```{r}
+jan6 <- single_game_oaa %>%
+          filter(name_display_first_last == "Victor Scott II") %>%
+          ggplot() +
+            geom_histogram(aes(x = oaa), bins = 50, fill = "khaki2", col = "khaki4") +
+            geom_segment(x = -2.5, y = 4, xend = -2.7, yend = 1.25,
+                         arrow = arrow(length = unit(0.25, "cm")),
+                         col = "red3") +
+            geom_text(x = -2.15, y = 4.55, label = "April 10th", check_overlap = TRUE, fontface = "bold") +
+            labs(x = "Outs above average", y = "Number of games") +
+            xlim(c(-3.25, 1.25)) +
+            theme_classic() + theme(axis.title = element_text(face = "bold"))
+
+jan6
+
+ggsave("../figures/jan6.png", plot = jan6, height = 4, width = 6)
 ```
 
 
