@@ -148,6 +148,12 @@ single_game_oaa %>%
   head(10)
 ```
 
+
+
+\newpage
+
+# January 6th
+
 ```{r}
 single_game_oaa %>%
   arrange(oaa) %>%
@@ -159,6 +165,10 @@ single_game_oaa %>%
 \newpage
 
 # Later
+
+```{r}
+data_final %>% group_by(catch_rate) %>% summarize(mean(out))
+```
 
 ```{r}
 data_final %>%
