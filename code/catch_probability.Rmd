@@ -182,11 +182,38 @@ ggsave("../figures/jan6.png", plot = jan6, height = 4, width = 6)
 
 \newpage
 
-# Later
+# January 7th
 
 ```{r}
-data_final %>% group_by(catch_rate) %>% summarize(mean(out))
+calibration_table <- data_final %>%
+                      group_by(catch_rate) %>%
+                      summarize(actual_catch_rate = mean(out)) %>%
+                      rename(nominal_catch_rate = catch_rate)
+
+jan7 <- calibration_table %>%
+          ggplot(aes(x = nominal_catch_rate, y = actual_catch_rate)) +
+            geom_abline(intercept = 0, slope = 1,
+                        color = "gray30", linetype = "dashed", linewidth = 0.5) +
+            geom_point(pch = 21, col = "cyan4", fill = "lightcyan2",
+                       size = 4, stroke = 1) +
+            theme_minimal() +
+            lims(x = c(0,1), y = c(0,1)) +
+            labs(x = "Nominal catch rate", y = "Actual catch rate",
+                 title = "Nominal vs. actual catch rate, 2024") +
+            theme(axis.title = element_text(face = "bold"),
+                  axis.text = element_text(face = "bold"),
+                  title = element_text(face = "bold"))
+
+jan7
+
+ggsave("../figures/jan7.png", plot = jan7, height = 4, width = 6)
 ```
+
+
+
+\newpage
+
+# Later
 
 ```{r}
 data_final %>%
