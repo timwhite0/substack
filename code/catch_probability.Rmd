@@ -250,6 +250,54 @@ ggsave("../figures/jan7_2.png", plot = jan7_2, height = 4, width = 6)
 
 \newpage
 
+# January 8th
+
+```{r}
+of_oaa_2024 <- read_csv("../data/of_oaa_2024.csv")
+
+oaa_rounding_check <- of_catch_prob_2024 %>%
+                        mutate(catch_rate_upper = pmin(0.999999, catch_rate - 0.02),
+                               catch_rate_lower = pmin(0.999999, catch_rate + 0.02)) %>%
+                        group_by(player_id, name_display_first_last) %>%
+                        summarize(opp = n(),
+                                  oaa_lower = round(sum(out * (1 - catch_rate_lower) - (1 - out) * catch_rate_lower)),
+                                  oaa_estimate = sum(out * (1 - catch_rate) - (1 - out) * catch_rate),
+                                  oaa_upper = round(sum(out * (1 - catch_rate_upper) - (1 - out) * catch_rate_upper))) %>%
+                        ungroup() %>%
+                        left_join(of_oaa_2024, by = "player_id") %>%
+                        select(player_id, name = name_display_first_last, opp,
+                               oaa_lower, oaa_estimate, oaa_upper, oaa_true = oaa)
+
+oaa_rounding_check %>%
+  summarize(any(oaa_true < oaa_lower | oaa_true > oaa_upper))
+
+set.seed(0)
+jan8 <- oaa_rounding_check %>%
+          filter(opp > 162) %>%
+          group_by(oaa_true) %>%
+          sample_n(1) %>%
+          ggplot(aes(x = oaa_true, y = oaa_estimate)) +
+            geom_linerange(aes(ymin = oaa_lower, ymax = oaa_upper), col = "sienna4", linewidth = 0.75) +
+            geom_point(size = 2, stroke = 1, pch = 21, fill = "burlywood1", col = "sienna4") +
+            geom_abline(intercept = 0, slope = 1, linetype = "dashed", col = "gray40") +
+            theme_minimal() +
+            labs(x = "OAA reported by Baseball Savant",
+                 y = "OAA estimated using scraped data",
+                 title = "Actual vs. estimated OAA for selected players, 2024",
+                 subtitle = "Lower and upper bounds computed by changing each catch rate by +/-0.02") +
+            theme(axis.title = element_text(face = "bold"),
+                  axis.text = element_text(face = "bold"),
+                  title = element_text(face = "bold"))
+
+jan8
+
+ggsave("../figures/jan8.png", plot = jan8, height = 4, width = 6)
+```
+
+
+
+\newpage
+
 # Later
 
 ```{r}
