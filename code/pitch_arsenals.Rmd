@@ -80,14 +80,15 @@ arsenals <- arsenals %>%
 arsenals <- teams %>%
               right_join(arsenals, by = "name") %>%
               mutate(pitchmix = "") %>%
-              mutate(pitchmix = ifelse(fourseam_mph > 0, paste0(pitchmix, "FF-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(sinker_mph > 0, paste0(pitchmix, "SI-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(cutter_mph > 0, paste0(pitchmix, "FC-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(slider_mph > 0, paste0(pitchmix, "SL-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(changeup_mph > 0, paste0(pitchmix, "CH-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(curve_mph > 0, paste0(pitchmix, "CU-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(splitter_mph > 0, paste0(pitchmix, "FS-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(sweeper_mph > 0, paste0(pitchmix, "ST-"), pitchmix)) %>%
+              # include the pitch type as long as it was thrown at least 1% of the time
+              mutate(pitchmix = ifelse(fourseam_p > 1, paste0(pitchmix, "FF-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(sinker_p > 1, paste0(pitchmix, "SI-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(cutter_p > 1, paste0(pitchmix, "FC-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(slider_p > 1, paste0(pitchmix, "SL-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(changeup_p > 1, paste0(pitchmix, "CH-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(curve_p > 1, paste0(pitchmix, "CU-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(splitter_p > 1, paste0(pitchmix, "FS-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(sweeper_p > 1, paste0(pitchmix, "ST-"), pitchmix)) %>%
               mutate(pitchmix = as.factor(str_remove(pitchmix, "-$")))
 ```
 
