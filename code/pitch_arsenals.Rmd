@@ -162,7 +162,7 @@ jan12 <- arsenals %>%
             theme_bw() +
             theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
             labs(x = "Pitch mix", y = "Number of pitchers",
-                 title = "Most common pitch mix among MLB pitchers in 2024") +
+                 title = "Most common pitch mixes among MLB pitchers in 2024") +
             theme(axis.title = element_text(face = "bold"),
                   title = element_text(face = "bold"))
 
