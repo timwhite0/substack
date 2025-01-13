@@ -80,15 +80,15 @@ arsenals <- arsenals %>%
 arsenals <- teams %>%
               right_join(arsenals, by = "name") %>%
               mutate(pitchmix = "") %>%
-              mutate(pitchmix = ifelse(fourseam_mph > 0, paste0(pitchmix, "fourseam-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(sinker_mph > 0, paste0(pitchmix, "sinker-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(cutter_mph > 0, paste0(pitchmix, "cutter-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(slider_mph > 0, paste0(pitchmix, "slider-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(changeup_mph > 0, paste0(pitchmix, "changeup-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(curve_mph > 0, paste0(pitchmix, "curve-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(splitter_mph > 0, paste0(pitchmix, "splitter-"), pitchmix)) %>%
-              mutate(pitchmix = ifelse(sweeper_mph > 0, paste0(pitchmix, "sweeper-"), pitchmix)) %>%
-              mutate(pitchmix = str_remove(pitchmix, "-$"))    
+              mutate(pitchmix = ifelse(fourseam_mph > 0, paste0(pitchmix, "FF-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(sinker_mph > 0, paste0(pitchmix, "SI-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(cutter_mph > 0, paste0(pitchmix, "FC-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(slider_mph > 0, paste0(pitchmix, "SL-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(changeup_mph > 0, paste0(pitchmix, "CH-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(curve_mph > 0, paste0(pitchmix, "CU-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(splitter_mph > 0, paste0(pitchmix, "FS-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(sweeper_mph > 0, paste0(pitchmix, "ST-"), pitchmix)) %>%
+              mutate(pitchmix = as.factor(str_remove(pitchmix, "-$")))
 ```
 
 
@@ -153,13 +153,39 @@ arsenals %>%
 
 # January 12th
 
-Note to self: make sure to download spin leaderboard in addition to speed and usage.
+```{r}
+jan12 <- arsenals %>%
+          count(pitchmix) %>%
+          top_n(10, n) %>%
+          ggplot(aes(x = fct_reorder(pitchmix, desc(n)), y = n)) +
+            geom_col(fill = "honeydew3", col = "honeydew4") +
+            theme_bw() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+            labs(x = "Pitch mix", y = "Number of pitchers",
+                 title = "Most common pitch mix among MLB pitchers in 2024") +
+            theme(axis.title = element_text(face = "bold"),
+                  title = element_text(face = "bold"))
+
+jan12
+
+ggsave("../figures/jan12.png", plot = jan12, height = 4, width = 6)
+```
 
 ```{r}
 arsenals %>%
-  count(num, pitchmix) %>%
-  arrange(desc(n))
+  filter(team != "MUL") %>%
+  count(team, pitchmix) %>%
+  arrange(desc(n)) %>%
+  head(10)
 ```
+
+
+
+\newpage
+
+# Later
+
+Note to self: make sure to download spin leaderboard in addition to speed and usage.
 
 
 
