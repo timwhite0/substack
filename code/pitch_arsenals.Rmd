@@ -23,6 +23,8 @@ speed <- statcast_leaderboards(leaderboard = "pitch_arsenal",
                                year = 2024, arsenal_type = "avg_speed", min_pitches = 50)
 usage <- statcast_leaderboards(leaderboard = "pitch_arsenal",
                                year = 2024, arsenal_type = "n_", min_pitches = 50)
+spin <- statcast_leaderboards(leaderboard = "pitch_arsenal",
+                              year = 2024, arsenal_type = "avg_spin", min_pitches = 50)
 ```
 
 ```{r}
@@ -52,9 +54,24 @@ usage <- usage %>%
 ```
 
 ```{r}
+spin <- spin %>%
+  rename(name = 'last_name, first_name',
+         fourseam_spin = 'ff_avg_spin', sinker_spin = 'si_avg_spin',
+         cutter_spin = 'fc_avg_spin', slider_spin = 'sl_avg_spin',
+         changeup_spin = 'ch_avg_spin', curve_spin = 'cu_avg_spin',
+         splitter_spin = 'fs_avg_spin', knuckle_spin = 'kn_avg_spin',
+         sweeper_spin = 'st_avg_spin', slurve_spin = 'sv_avg_spin') %>%
+  mutate(name = as.factor(name), pitcher = as.factor(pitcher)) %>%
+  mutate_all(function(col) {replace_na(col, 0)}) %>%
+  select(-year)
+```
+
+
+```{r}
 # Merge speed and usage
 arsenals <- speed %>% select(-name) %>%
-              inner_join(usage, by = "pitcher") %>%
+              inner_join(usage, by = "pitcher") %>% select(-name) %>%
+              inner_join(spin, by = "pitcher") %>%
               select(-pitcher) %>% select(name, everything())
 
 # Add column for number of pitches in arsenal
@@ -179,14 +196,6 @@ arsenals %>%
   arrange(desc(n)) %>%
   head(10)
 ```
-
-
-
-\newpage
-
-# Later
-
-Note to self: make sure to download spin leaderboard in addition to speed and usage.
 
 
 
