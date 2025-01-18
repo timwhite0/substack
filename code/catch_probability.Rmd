@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```{r}
 library(tidyverse)
 library(rjson)
+library(baseballr)
 ```
 
 
@@ -76,21 +77,39 @@ of_catch_prob_2023 %>% write_csv("../data/of_catch_prob_2023.csv")
 # Load in data
 
 ```{r}
-of_catch_prob_2024 <- read_csv("../data/of_catch_prob_2024.csv") %>%
-                        filter(!is.na(sprint_speed)) %>%
-                        mutate(game_pk = as.factor(game_pk),
-                               play_id = as.factor(play_id),
-                               name_display_first_last = as.factor(name_display_first_last),
-                               pos = as.factor(pos))
-of_catch_prob_2023 <- read_csv("../data/of_catch_prob_2023.csv") %>%
-                        filter(!is.na(sprint_speed)) %>%
-                        mutate(game_pk = as.factor(game_pk),
-                               play_id = as.factor(play_id),
-                               name_display_first_last = as.factor(name_display_first_last),
-                               pos = as.factor(pos))
+read_and_clean_data <- function(year) {
+  of_catch_prob <- read_csv(paste0("../data/of_catch_prob_", year, ".csv")) %>%
+                          filter(!is.na(sprint_speed)) %>%
+                          mutate(game_pk = as.factor(game_pk),
+                                 play_id = as.factor(play_id),
+                                 player = as.factor(name_display_first_last),
+                                 pos = as.factor(pos))
+  
+  teams <- fg_batter_leaders(startseason = year, endseason = year) %>%
+              mutate(team_name = as.factor(ifelse(team_name == "- - -", "MUL", team_name))) %>%
+              select(player = PlayerName, team = team_name)
+  of_catch_prob_teams <- teams %>% right_join(of_catch_prob, by = "player")
+  
+  venues <- mlb_schedule(season = year) %>%
+              mutate(game_pk = as.factor(game_pk),
+                     venue = as.factor(venue_name)) %>%
+              select(game_pk, venue)
+  of_catch_prob_teams_venues <- of_catch_prob_teams %>%
+                                  left_join(venues, by = "game_pk")
+  
+  return(of_catch_prob_teams_venues)
+}
 ```
 
 
+```{r}
+of_catch_prob_2024 <- read_and_clean_data("2024")
+of_catch_prob_2023 <- read_and_clean_data("2023")
+```
+
+
+
+\newpage
 
 # January 2nd
 
@@ -145,7 +164,7 @@ ggsave("../figures/jan2_3.png", plot = jan2_3)
 
 ```{r}
 single_game_oaa <- of_catch_prob_2024 %>%
-                    group_by(game_pk, name_display_first_last) %>%
+                    group_by(game_pk, player) %>%
                     summarize(oaa = sum(out * (1 - catch_rate) - (1 - out) * catch_rate),
                               opportunities = n(),
                               catches = sum(out),
@@ -184,7 +203,7 @@ single_game_oaa %>%
 
 ```{r}
 jan6 <- single_game_oaa %>%
-          filter(name_display_first_last == "Victor Scott II") %>%
+          filter(player == "Victor Scott II") %>%
           ggplot() +
             geom_histogram(aes(x = oaa), bins = 50, fill = "khaki2", col = "khaki4") +
             geom_segment(x = -2.5, y = 4, xend = -2.7, yend = 1.25,
@@ -268,14 +287,14 @@ of_oaa_2024 <- read_csv("../data/of_oaa_2024.csv")
 oaa_rounding_check <- of_catch_prob_2024 %>%
                         mutate(catch_rate_upper = pmin(0.999999, catch_rate - 0.02),
                                catch_rate_lower = pmin(0.999999, catch_rate + 0.02)) %>%
-                        group_by(player_id, name_display_first_last) %>%
+                        group_by(player_id, player) %>%
                         summarize(opp = n(),
                                   oaa_lower = round(sum(out * (1 - catch_rate_lower) - (1 - out) * catch_rate_lower)),
                                   oaa_estimate = sum(out * (1 - catch_rate) - (1 - out) * catch_rate),
                                   oaa_upper = round(sum(out * (1 - catch_rate_upper) - (1 - out) * catch_rate_upper))) %>%
                         ungroup() %>%
                         left_join(of_oaa_2024, by = "player_id") %>%
-                        select(player_id, name = name_display_first_last, opp,
+                        select(player_id, name = player, opp,
                                oaa_lower, oaa_estimate, oaa_upper, oaa_true = oaa)
 
 oaa_rounding_check %>%
@@ -335,19 +354,71 @@ ggsave("../figures/jan9.png", plot = jan9, height = 4, width = 6)
 
 \newpage
 
-# Later
-
+# January 17th
 
 ```{r}
-mod <- glm(as.factor(out) ~ hang_time + distance + as.factor(wall) + as.factor(back) + as.factor(pos) + sprint_speed, family = "binomial", data = of_catch_prob_2024)
+jan17_1 <- of_catch_prob_2024 %>%
+              mutate(venue = fct_recode(venue,
+                                        "AmFam Field" = "American Family Field",
+                                        "Guaranteed Rate" = "Guaranteed Rate Field",
+                                        "Camden Yards" = "Oriole Park at Camden Yards",
+                                        "Great American" = "Great American Ball Park",
+                                        "Citizens Bank" = "Citizens Bank Park"
+              )) %>%
+              ggplot(aes(x = landing_pos_x, y = landing_pos_y)) +
+                geom_point(size = 0.25, alpha = 0.25, col = "slategray4") +
+                facet_wrap(~venue, scales = "fixed") +
+                theme_bw() +
+                labs(x = "Horizontal distance from home plate (ft)",
+                     y = "Vertical distance from home plate (ft)",
+                     title = "Landing positions of fly balls by stadium, 2024") +
+                theme(axis.title = element_text(face = "bold"),
+                      title = element_text(face = "bold"),
+                      plot.subtitle = element_text(face = "italic"),
+                      strip.background = element_rect(fill = "wheat4", color = "gray10"),
+                      strip.text = element_text(face = "bold", color = "white")) +
+                scale_x_continuous(breaks = c(-200, 0, 200)) +
+                scale_y_continuous(breaks = c(200, 400))
 
-tibble(pred_prob = predict(mod, type = "response")) %>%
-  mutate(pred_prob_rounded = round(pred_prob, digits = 2)) %>%
-  bind_cols(of_catch_prob_2024) %>%
-  group_by(pred_prob_rounded) %>%
-  summarize(actual = mean(out)) %>%
-  ggplot(aes(x = pred_prob_rounded, y = actual)) + geom_point() + geom_abline()
+jan17_1
+
+ggsave("../figures/jan17_1.png", plot = jan17_1, height = 6, width = 8)
 ```
+
+```{r}
+jan17_2 <- of_catch_prob_2024 %>%
+              mutate(venue = fct_recode(venue,
+                                        "AmFam Field" = "American Family Field",
+                                        "Guaranteed Rate" = "Guaranteed Rate Field",
+                                        "Camden Yards" = "Oriole Park at Camden Yards",
+                                        "Great American" = "Great American Ball Park",
+                                        "Citizens Bank" = "Citizens Bank Park"
+              )) %>%
+              ggplot(aes(x = start_pos_x, y = start_pos_y)) +
+                geom_point(size = 0.25, alpha = 0.25, col = "slategray4") +
+                facet_wrap(~venue, scales = "fixed") +
+                theme_bw() +
+                labs(x = "Horizontal distance from home plate (ft)",
+                     y = "Vertical distance from home plate (ft)",
+                     title = "Starting positions of outfielders by stadium, 2024") +
+                theme(axis.title = element_text(face = "bold"),
+                      title = element_text(face = "bold"),
+                      plot.subtitle = element_text(face = "italic"),
+                      strip.background = element_rect(fill = "wheat4", color = "gray10"),
+                      strip.text = element_text(face = "bold", color = "white")) +
+                scale_x_continuous(breaks = c(-200, 0, 200)) +
+                scale_y_continuous(breaks = c(200, 400))
+
+jan17_2
+
+ggsave("../figures/jan17_2.png", plot = jan17_2, height = 6, width = 8)
+```
+
+
+
+\newpage
+
+# Later
 
 ```{r}
 of_catch_prob_2024 %>%
