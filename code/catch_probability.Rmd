@@ -452,6 +452,45 @@ ggsave("../figures/jan17_2.png", plot = jan17_2, height = 6, width = 8)
 
 \newpage
 
+# January 18th
+
+```{r}
+stadium_dims <- of_catch_prob_2024 %>%
+                  distinct(stadium, .keep_all = TRUE) %>%
+                  select(stadium, starts_with("wall_height"), starts_with("dist_"))
+
+pca <- prcomp(stadium_dims %>% select(-stadium), center = TRUE, scale = TRUE)
+
+pca
+
+summary(pca)
+```
+
+```{r}
+set.seed(18)
+
+jan18 <- tibble(stadium = stadium_dims$stadium, pc1 = pca$x[,1], pc2 = pca$x[,2]) %>%
+            ggplot(aes(x = pc1, y = pc2)) +
+              ggrepel::geom_text_repel(aes(label = stadium), fontface = "bold", col = "firebrick4",
+                                       min.segment.length = 1,
+                                       label.padding = 0.0, box.padding = 0.05, point.padding = 0,
+                                       size = 2, max.overlaps = 30) +
+              theme_classic() +
+              labs(title = "First two principal component scores for MLB stadium shapes",
+                   x = "PC1 (deep corners, shallow CF, tall RF ->)",
+                   y = "PC2 (shallow left center, tall LF ->)") +
+              theme(axis.title = element_text(face = "bold"),
+                    title = element_text(face = "bold"))
+
+jan18
+
+ggsave("../figures/jan18.png", plot = jan18, height = 4, width = 6)
+```
+
+
+
+\newpage
+
 # Later
 
 ```{r}
