@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(rjson)
 library(baseballr)
+library(rvest)
 ```
 
 
@@ -61,24 +62,9 @@ scrape_of_catch_prob_data <- function(year) {
 }
 ```
 
-
-```{r eval = FALSE}
-of_catch_prob_2024 <- scrape_of_catch_prob_data("2024")
-of_catch_prob_2024 %>% write_csv("../data/of_catch_prob_2024.csv")
-
-of_catch_prob_2023 <- scrape_of_catch_prob_data("2023")
-of_catch_prob_2023 %>% write_csv("../data/of_catch_prob_2023.csv")
-```
-
-
-
-\newpage
-
-# Load in data
-
 ```{r}
-read_and_clean_data <- function(year) {
-  of_catch_prob <- read_csv(paste0("../data/of_catch_prob_", year, ".csv")) %>%
+clean_of_catch_prob_data <- function(year) {
+  of_catch_prob <- read_csv(paste0("../data/of_catch_prob_", year, "_orig.csv")) %>%
                           filter(!is.na(sprint_speed)) %>%
                           mutate(game_pk = as.factor(game_pk),
                                  play_id = as.factor(play_id),
@@ -90,21 +76,69 @@ read_and_clean_data <- function(year) {
               select(player = PlayerName, team = team_name)
   of_catch_prob_teams <- teams %>% right_join(of_catch_prob, by = "player")
   
-  venues <- mlb_schedule(season = year) %>%
-              mutate(game_pk = as.factor(game_pk),
-                     venue = as.factor(venue_name)) %>%
-              select(game_pk, venue)
-  of_catch_prob_teams_venues <- of_catch_prob_teams %>%
-                                  left_join(venues, by = "game_pk")
+  stadiums <- mlb_schedule(season = year) %>%
+                mutate(game_pk = as.factor(game_pk),
+                       stadium = as.factor(venue_name)) %>%
+                select(game_pk, stadium)
+  of_catch_prob_teams_stadiums <- of_catch_prob_teams %>%
+                                    left_join(stadiums, by = "game_pk")
   
-  return(of_catch_prob_teams_venues)
+  dimensions_table <- read_html("http://www.andrewclem.com/Baseball/Stadium_statistics.html") %>%
+                        html_elements("table") %>%
+                        html_table()
+  dimensions_colnames <- dimensions_table[[1]] %>% janitor::row_to_names(row_number=1) %>%
+                          select(stadium = "Stadium (see notes)",
+                                 wall_height_lf = "LF", wall_height_cf = "CF", wall_height_rf = "RF",
+                                 dist_lf = "Left field", dist_lc = "Left-center", dist_cf = "Center field",
+                                 dist_rc = "Right-center", dist_rf = "Right field") %>%
+                          colnames()
+  dimensions_data <- dimensions_table[[2]] %>%
+                        select(X1, X12, X13, X14, X17, X18, X19, X20, X21) %>%
+                        rename_with(~dimensions_colnames) %>%
+                        mutate(stadium = as.factor(stadium)) %>%
+                        mutate(stadium = str_remove_all(stadium, " \\*")) %>%
+                        mutate(across(contains("wall"),
+                                      function(col) {str_remove_all(col, "[()\\[\\]]")})) %>%
+                        mutate(across(contains("wall"), as.numeric)) %>%
+                        mutate(across(contains("dist"),
+                                      function(col) {str_remove_all(col, "[()\\[\\]]")})) %>%
+                        mutate(across(contains("dist"), as.numeric)) %>%
+                        mutate(stadium = fct_recode(stadium,
+                                                    "American Family Field" = "Miller Park",
+                                                    "Busch Stadium" = "Busch Stadium III",
+                                                    "Great American Ball Park" = "Great American Ballpark",
+                                                    "loanDepot park" = "Marlins Park",
+                                                    "Petco Park" = "PETCO Park",
+                                                    "T-Mobile Park" = "Safeco Field",
+                                                    "Truist Park" = "Truist (ex-SunTrust) Park"))
+  of_catch_prob_teams_stadiums_dims <- of_catch_prob_teams_stadiums %>%
+                                          left_join(dimensions_data, by = "stadium")
+  
+  return(of_catch_prob_teams_stadiums_dims)
 }
 ```
 
+```{r eval = FALSE}
+of_catch_prob_2024_orig <- scrape_of_catch_prob_data("2024")
+of_catch_prob_2024_orig %>% write_csv("../data/of_catch_prob_2024_orig.csv")
+of_catch_prob_2024 <- clean_of_catch_prob_data("2024")
+of_catch_prob_2024 %>% write_csv("../data/of_catch_prob_2024.csv")
+
+of_catch_prob_2023_orig <- scrape_of_catch_prob_data("2023")
+of_catch_prob_2023_orig %>% write_csv("../data/of_catch_prob_2023_orig.csv")
+of_catch_prob_2023 <- clean_of_catch_prob_data("2023")
+of_catch_prob_2023 %>% write_csv("../data/of_catch_prob_2023.csv")
+```
+
+
+
+\newpage
+
+# Load in data
 
 ```{r}
-of_catch_prob_2024 <- read_and_clean_data("2024")
-of_catch_prob_2023 <- read_and_clean_data("2023")
+of_catch_prob_2024 <- read_csv("../data/of_catch_prob_2024.csv")
+of_catch_prob_2023 <- read_csv("../data/of_catch_prob_2023.csv")
 ```
 
 
@@ -358,7 +392,7 @@ ggsave("../figures/jan9.png", plot = jan9, height = 4, width = 6)
 
 ```{r}
 jan17_1 <- of_catch_prob_2024 %>%
-              mutate(venue = fct_recode(venue,
+              mutate(stadium = fct_recode(stadium,
                                         "AmFam Field" = "American Family Field",
                                         "Guaranteed Rate" = "Guaranteed Rate Field",
                                         "Camden Yards" = "Oriole Park at Camden Yards",
@@ -367,7 +401,7 @@ jan17_1 <- of_catch_prob_2024 %>%
               )) %>%
               ggplot(aes(x = landing_pos_x, y = landing_pos_y)) +
                 geom_point(size = 0.25, alpha = 0.25, col = "slategray4") +
-                facet_wrap(~venue, scales = "fixed") +
+                facet_wrap(~stadium, scales = "fixed") +
                 theme_bw() +
                 labs(x = "Horizontal distance from home plate (ft)",
                      y = "Vertical distance from home plate (ft)",
@@ -387,7 +421,7 @@ ggsave("../figures/jan17_1.png", plot = jan17_1, height = 6, width = 8)
 
 ```{r}
 jan17_2 <- of_catch_prob_2024 %>%
-              mutate(venue = fct_recode(venue,
+              mutate(stadium = fct_recode(stadium,
                                         "AmFam Field" = "American Family Field",
                                         "Guaranteed Rate" = "Guaranteed Rate Field",
                                         "Camden Yards" = "Oriole Park at Camden Yards",
@@ -396,7 +430,7 @@ jan17_2 <- of_catch_prob_2024 %>%
               )) %>%
               ggplot(aes(x = start_pos_x, y = start_pos_y)) +
                 geom_point(size = 0.25, alpha = 0.25, col = "slategray4") +
-                facet_wrap(~venue, scales = "fixed") +
+                facet_wrap(~stadium, scales = "fixed") +
                 theme_bw() +
                 labs(x = "Horizontal distance from home plate (ft)",
                      y = "Vertical distance from home plate (ft)",
