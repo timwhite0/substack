@@ -104,6 +104,8 @@ clean_of_catch_prob_data <- function(year) {
                                       function(col) {str_remove_all(col, "[()\\[\\]]")})) %>%
                         mutate(across(contains("dist"), as.numeric)) %>%
                         mutate(stadium = fct_recode(stadium,
+                                                    "Old Yankee Stadium" = "Yankee Stadium",
+                                                    "Yankee Stadium" = "Yankee Stadium II",
                                                     "American Family Field" = "Miller Park",
                                                     "Busch Stadium" = "Busch Stadium III",
                                                     "Great American Ball Park" = "Great American Ballpark",
@@ -469,7 +471,8 @@ summary(pca)
 ```{r}
 set.seed(18)
 
-jan18 <- tibble(stadium = stadium_dims$stadium, pc1 = pca$x[,1], pc2 = pca$x[,2]) %>%
+jan18 <- tibble(stadium = stadium_dims$stadium,
+                pc1 = pca$x[,1], pc2 = pca$x[,2], pc3 = pca$x[,3]) %>%
             ggplot(aes(x = pc1, y = pc2)) +
               ggrepel::geom_text_repel(aes(label = stadium), fontface = "bold", col = "firebrick4",
                                        min.segment.length = 1,
@@ -477,8 +480,8 @@ jan18 <- tibble(stadium = stadium_dims$stadium, pc1 = pca$x[,1], pc2 = pca$x[,2]
                                        size = 2, max.overlaps = 30) +
               theme_classic() +
               labs(title = "First two principal component scores for MLB stadium shapes",
-                   x = "PC1 (deep corners, shallow CF, tall RF ->)",
-                   y = "PC2 (shallow left center, tall LF ->)") +
+                   x = "PC1 (deep corners, short LF wall ->)",
+                   y = "PC2 (shallow CF and RF, short CF wall ->)") +
               theme(axis.title = element_text(face = "bold"),
                     title = element_text(face = "bold"))
 
