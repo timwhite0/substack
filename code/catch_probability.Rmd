@@ -69,7 +69,8 @@ clean_of_catch_prob_data <- function(year) {
                           mutate(game_pk = as.factor(game_pk),
                                  play_id = as.factor(play_id),
                                  player = as.factor(name_display_first_last),
-                                 pos = as.factor(pos))
+                                 pos = as.factor(pos)) %>%
+                          select(-name_display_first_last)
   
   teams <- fg_batter_leaders(startseason = year, endseason = year) %>%
               mutate(team_name = as.factor(ifelse(team_name == "- - -", "MUL", team_name))) %>%
@@ -493,6 +494,8 @@ ggsave("../figures/jan18.png", plot = jan18, height = 4, width = 6)
 
 
 \newpage
+
+
 
 # Later
 
