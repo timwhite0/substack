@@ -398,23 +398,16 @@ ggsave("../../figures/jan18.png", plot = jan18, height = 4, width = 6)
 
 \newpage
 
+# Later
 
-# January 21st
-
-```{r}
+```{r eval = FALSE}
 players_to_keep <- of_catch_prob_2024 %>% count(player) %>% filter(n >= 50) %>% pull(player)
 df <- of_catch_prob_2024 %>%
         filter(player %in% players_to_keep) %>%
         filter(stars < 6)
 model <- glm(out ~ pos*route_direction + wall + distance + hang_time + player + stadium,
              family = "binomial", data = df)
-
-summary(model)$coefficients[,1:2] %>% as.data.frame() %>% View()
 ```
-
-
-
-# Later
 
 ```{r}
 of_catch_prob_2024 %>%
