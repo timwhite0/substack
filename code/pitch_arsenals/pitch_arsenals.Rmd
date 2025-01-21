@@ -1,0 +1,202 @@
+---
+title: "\\textbf{Pitch arsenals}"
+author: "Tim White"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(baseballr)
+```
+
+
+
+# Obtain pitch arsenal data
+
+```{r message = FALSE, warning = FALSE}
+speed <- statcast_leaderboards(leaderboard = "pitch_arsenal",
+                               year = 2024, arsenal_type = "avg_speed", min_pitches = 50)
+usage <- statcast_leaderboards(leaderboard = "pitch_arsenal",
+                               year = 2024, arsenal_type = "n_", min_pitches = 50)
+spin <- statcast_leaderboards(leaderboard = "pitch_arsenal",
+                              year = 2024, arsenal_type = "avg_spin", min_pitches = 50)
+```
+
+```{r}
+speed <- speed %>%
+  rename(name = 'last_name, first_name',
+         fourseam_mph = 'ff_avg_speed', sinker_mph = 'si_avg_speed',
+         cutter_mph = 'fc_avg_speed', slider_mph = 'sl_avg_speed',
+         changeup_mph = 'ch_avg_speed', curve_mph = 'cu_avg_speed',
+         splitter_mph = 'fs_avg_speed', knuckle_mph = 'kn_avg_speed',
+         sweeper_mph = 'st_avg_speed', slurve_mph = 'sv_avg_speed') %>%
+  mutate(name = as.factor(name), pitcher = as.factor(pitcher)) %>%
+  mutate_all(function(col) {replace_na(col, 0)}) %>%
+  select(-year)
+```
+
+```{r}
+usage <- usage %>%
+  rename(name = 'last_name, first_name',
+         fourseam_p = 'n_ff', sinker_p = 'n_si',
+         cutter_p = 'n_fc', slider_p = 'n_sl',
+         changeup_p = 'n_ch', curve_p = 'n_cu',
+         splitter_p = 'n_fs', knuckle_p = 'n_kn',
+         sweeper_p = 'n_st', slurve_p = 'n_sv') %>%
+  mutate(name = as.factor(name), pitcher = as.factor(pitcher)) %>%
+  mutate_all(function(col) {replace_na(col, 0)}) %>%
+  select(-year)
+```
+
+```{r}
+spin <- spin %>%
+  rename(name = 'last_name, first_name',
+         fourseam_spin = 'ff_avg_spin', sinker_spin = 'si_avg_spin',
+         cutter_spin = 'fc_avg_spin', slider_spin = 'sl_avg_spin',
+         changeup_spin = 'ch_avg_spin', curve_spin = 'cu_avg_spin',
+         splitter_spin = 'fs_avg_spin', knuckle_spin = 'kn_avg_spin',
+         sweeper_spin = 'st_avg_spin', slurve_spin = 'sv_avg_spin') %>%
+  mutate(name = as.factor(name), pitcher = as.factor(pitcher)) %>%
+  mutate_all(function(col) {replace_na(col, 0)}) %>%
+  select(-year)
+```
+
+
+```{r}
+# Merge speed and usage
+arsenals <- speed %>% select(-name) %>%
+              inner_join(usage, by = "pitcher") %>% select(-name) %>%
+              inner_join(spin, by = "pitcher") %>%
+              select(-pitcher) %>% select(name, everything())
+
+# Add column for number of pitches in arsenal
+arsenals <- arsenals %>%
+              rowwise() %>%
+              # include the pitch type as long as it was thrown at least 1% of the time
+              mutate(num = sum(across(fourseam_p:slurve_p, function(col) {sum(col >= 1)}))) %>%
+              ungroup()
+
+# Reformat names
+arsenals <- arsenals %>% mutate(name = str_replace(name, "(.*),\\s*(.*)", "\\2 \\1"))
+
+# Add column for team names
+teams <- fg_pitcher_leaders(startseason = "2024", endseason = "2024") %>%
+          mutate(team_name = as.factor(ifelse(team_name == "- - -", "MUL", team_name))) %>%
+          select(name = PlayerName, team = team_name) %>%
+          mutate(name = ifelse(name == "Logan Allen" & team == "CLE", "Logan T. Allen", name))
+
+arsenals <- arsenals %>%
+              mutate(name = ifelse(name == "Logan Allen" & num == 4, "Logan T. Allen", name))
+
+# Add column for pitch mix
+arsenals <- teams %>%
+              right_join(arsenals, by = "name") %>%
+              mutate(pitchmix = "") %>%
+              # include the pitch type as long as it was thrown at least 1% of the time
+              mutate(pitchmix = ifelse(fourseam_p > 1, paste0(pitchmix, "FF-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(sinker_p > 1, paste0(pitchmix, "SI-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(cutter_p > 1, paste0(pitchmix, "FC-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(slider_p > 1, paste0(pitchmix, "SL-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(changeup_p > 1, paste0(pitchmix, "CH-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(curve_p > 1, paste0(pitchmix, "CU-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(splitter_p > 1, paste0(pitchmix, "FS-"), pitchmix)) %>%
+              mutate(pitchmix = ifelse(sweeper_p > 1, paste0(pitchmix, "ST-"), pitchmix)) %>%
+              mutate(pitchmix = as.factor(str_remove(pitchmix, "-$")))
+```
+
+
+
+# January 11th
+
+```{r}
+jan11_1 <- arsenals %>%
+            ggplot(aes(x = as.factor(num))) +
+              geom_bar(fill = "lemonchiffon2", col = "lemonchiffon4") +
+              theme_bw() +
+              scale_x_discrete(labels = c("2", "3", "4", "5", "6", "7", "8", "9")) +
+              labs(x = "Number of pitch types", y = "Number of pitchers",
+                   title = "MLB pitchers' arsenal sizes, 2024") +
+              theme(axis.title = element_text(face = "bold"),
+                    title = element_text(face = "bold"))
+
+jan11_1
+
+ggsave("../figures/jan11_1.png", plot = jan11_1, height = 4, width = 6)
+```
+
+```{r}
+jan11_2 <- arsenals %>%
+            filter(team != "MUL") %>%
+            ggplot(aes(x = as.factor(num))) +
+              geom_bar(fill = "lemonchiffon2", col = "lemonchiffon4") +
+              facet_wrap(~team) +
+              theme_bw() +
+              scale_x_discrete(labels = c("2", "3", "4", "5", "6", "7", "8", "9")) +
+              labs(x = "Number of pitch types", y = "Number of pitchers",
+                   title = "MLB pitchers' arsenal sizes by team, 2024",
+                   subtitle = "Pitchers who played for multiple teams in 2024 are excluded") +
+              theme(axis.title = element_text(face = "bold"),
+                    title = element_text(face = "bold"),
+                    plot.subtitle = element_text(face = "italic"),
+                    strip.background = element_rect(fill = "slategray4", color = "gray10"),
+                    strip.text = element_text(face = "bold", color = "white"))
+
+jan11_2
+
+ggsave("../figures/jan11_2.png", plot = jan11_2, height = 6, width = 6)
+```
+
+```{r}
+arsenals %>%
+  filter(team != "MUL") %>%
+  group_by(team) %>%
+  summarize(twopitches = sum(num == 2)) %>%
+  arrange(desc(twopitches))
+
+arsenals %>%
+  filter(team != "MUL") %>%
+  group_by(team) %>%
+  summarize(variance = var(num)) %>%
+  arrange(desc(variance))
+```
+
+
+
+\newpage
+
+# January 12th
+
+```{r}
+jan12 <- arsenals %>%
+          count(pitchmix) %>%
+          top_n(10, n) %>%
+          ggplot(aes(x = fct_reorder(pitchmix, desc(n)), y = n)) +
+            geom_col(fill = "honeydew3", col = "honeydew4") +
+            theme_bw() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+            labs(x = "Pitch mix", y = "Number of pitchers",
+                 title = "Most common pitch mixes among MLB pitchers in 2024") +
+            theme(axis.title = element_text(face = "bold"),
+                  title = element_text(face = "bold"))
+
+jan12
+
+ggsave("../figures/jan12.png", plot = jan12, height = 4, width = 6)
+```
+
+```{r}
+arsenals %>%
+  filter(team != "MUL") %>%
+  count(team, pitchmix) %>%
+  arrange(desc(n)) %>%
+  head(10)
+```
+
+
+
+

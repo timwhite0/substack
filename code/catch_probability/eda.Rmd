@@ -1,0 +1,449 @@
+---
+title: "\\textbf{Catch probability EDA}"
+author: "Tim White"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(rjson)
+library(baseballr)
+library(rvest)
+```
+
+
+
+\newpage
+
+# Load in data
+
+```{r}
+of_catch_prob_2024 <- read_csv("../../data/of_catch_prob_2024.csv") %>%
+                        mutate(player = as.factor(player),
+                               team = as.factor(team),
+                               game_pk = as.factor(game_pk),
+                               play_id = as.factor(play_id),
+                               player_id = as.factor(player_id),
+                               pos = as.factor(pos),
+                               route_direction = as.factor(route_direction),
+                               ball_section = as.factor(ball_section),
+                               stadium = as.factor(stadium))
+  
+of_catch_prob_2023 <- read_csv("../../data/of_catch_prob_2023.csv") %>%
+                        mutate(player = as.factor(player),
+                               team = as.factor(team),
+                               game_pk = as.factor(game_pk),
+                               play_id = as.factor(play_id),
+                               player_id = as.factor(player_id),
+                               pos = as.factor(pos),
+                               route_direction = as.factor(route_direction),
+                               ball_section = as.factor(ball_section),
+                               stadium = as.factor(stadium))
+```
+
+
+
+\newpage
+
+# January 2nd
+
+```{r}
+jan2_1 <- of_catch_prob_2024 %>%
+            ggplot(aes(x = start_pos_x, y = start_pos_y)) +
+            geom_point(col = "steelblue4", size = 2, shape = 19) +
+            labs(title = "Starting positions on all balls hit to qualified OFs in 2024",
+                 x = "Horizontal distance from home plate (ft)",
+                 y = "Vertical distance from home plate (ft)") +
+            theme_linedraw()
+
+jan2_1
+
+ggsave("../../figures/jan2_1.png", plot = jan2_1)
+```
+
+```{r}
+jan2_2 <- of_catch_prob_2024 %>%
+            ggplot(aes(x = start_pos_x, y = start_pos_y)) +
+            geom_point(col = "steelblue4", size = 2, shape = 19, alpha = 0.025) +
+            labs(title = "Starting positions on all balls hit to qualified OFs in 2024",
+                 x = "Horizontal distance from home plate (ft)",
+                 y = "Vertical distance from home plate (ft)") +
+            theme_linedraw()
+
+jan2_2
+
+ggsave("../../figures/jan2_2.png", plot = jan2_2)
+```
+
+```{r}
+jan2_3 <- of_catch_prob_2024 %>%
+            filter(pos == "CF") %>%
+            ggplot(aes(x = start_pos_x, y = start_pos_y)) +
+            geom_point(col = "steelblue4", size = 2, shape = 19, alpha = 0.05) +
+            labs(title = "Starting positions on all balls hit to qualified CFs in 2024",
+                 x = "Horizontal distance from home plate (ft)",
+                 y = "Vertical distance from home plate (ft)") +
+            theme_linedraw()
+
+jan2_3
+
+ggsave("../../figures/jan2_3.png", plot = jan2_3)
+```
+
+
+
+\newpage
+
+# January 4th
+
+```{r}
+single_game_oaa <- of_catch_prob_2024 %>%
+                    group_by(game_pk, player) %>%
+                    summarize(oaa = sum(out * (1 - catch_rate) - (1 - out) * catch_rate),
+                              opportunities = n(),
+                              catches = sum(out),
+                              stars5_opps = sum(stars == 5),
+                              stars5_catches = sum(stars == 5 & out == 1),
+                              stars4_opps = sum(stars == 4),
+                              stars4_catches = sum(stars == 4 & out == 1),
+                              stars3_opps = sum(stars == 3),
+                              stars3_catches = sum(stars == 3 & out == 1),
+                              stars2_opps = sum(stars == 2),
+                              stars2_catches = sum(stars == 2 & out == 1),
+                              stars1_opps = sum(stars == 1),
+                              stars1_catches = sum(stars == 1 & out == 1),
+                              stars0_opps = sum(stars == 0),
+                              stars0_catches = sum(stars == 0 & out == 1),
+                              .groups = "drop")
+```
+
+```{r}
+single_game_oaa %>%
+  arrange(desc(oaa)) %>%
+  head(10)
+```
+
+
+
+\newpage
+
+# January 6th
+
+```{r}
+single_game_oaa %>%
+  arrange(oaa) %>%
+  head(10)
+```
+
+```{r}
+jan6 <- single_game_oaa %>%
+          filter(player == "Victor Scott II") %>%
+          ggplot() +
+            geom_histogram(aes(x = oaa), bins = 50, fill = "khaki2", col = "khaki4") +
+            geom_segment(x = -2.5, y = 4, xend = -2.7, yend = 1.25,
+                         arrow = arrow(length = unit(0.25, "cm")),
+                         col = "red3") +
+            geom_text(x = -2.15, y = 4.55, label = "April 10th", check_overlap = TRUE, fontface = "bold") +
+            labs(x = "Outs above average", y = "Number of games") +
+            xlim(c(-3.25, 1.25)) +
+            theme_classic() + theme(axis.title = element_text(face = "bold"))
+
+jan6
+
+ggsave("../../figures/jan6.png", plot = jan6, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+# January 7th
+
+```{r}
+calibration_table_2024 <- of_catch_prob_2024 %>%
+                            group_by(catch_rate) %>%
+                            summarize(actual_catch_rate = mean(out)) %>%
+                            rename(nominal_catch_rate = catch_rate)
+
+jan7_1 <- calibration_table_2024 %>%
+            ggplot(aes(x = nominal_catch_rate, y = actual_catch_rate)) +
+              geom_abline(intercept = 0, slope = 1,
+                          color = "gray30", linetype = "dashed", linewidth = 0.5) +
+              geom_point(pch = 21, col = "cyan4", fill = "lightcyan2",
+                         size = 4, stroke = 1) +
+              theme_minimal() +
+              lims(x = c(0,1), y = c(0,1)) +
+              labs(x = "Nominal catch rate", y = "Actual catch rate",
+                   title = "Nominal vs. actual catch rate, 2024") +
+              theme(axis.title = element_text(face = "bold"),
+                    axis.text = element_text(face = "bold"),
+                    title = element_text(face = "bold"))
+
+jan7_1
+
+ggsave("../../figures/jan7_1.png", plot = jan7_1, height = 4, width = 6)
+```
+
+```{r}
+calibration_table_2023 <- of_catch_prob_2023 %>%
+                            group_by(catch_rate) %>%
+                            summarize(actual_catch_rate = mean(out)) %>%
+                            rename(nominal_catch_rate = catch_rate)
+
+jan7_2 <- calibration_table_2023 %>%
+            ggplot(aes(x = nominal_catch_rate, y = actual_catch_rate)) +
+              geom_abline(intercept = 0, slope = 1,
+                          color = "gray30", linetype = "dashed", linewidth = 0.5) +
+              geom_point(pch = 21, col = "cyan4", fill = "lightcyan2",
+                         size = 4, stroke = 1) +
+              theme_minimal() +
+              lims(x = c(0,1), y = c(0,1)) +
+              labs(x = "Nominal catch rate", y = "Actual catch rate",
+                   title = "Nominal vs. actual catch rate, 2023") +
+              theme(axis.title = element_text(face = "bold"),
+                    axis.text = element_text(face = "bold"),
+                    title = element_text(face = "bold"))
+
+jan7_2
+
+ggsave("../../figures/jan7_2.png", plot = jan7_2, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+# January 8th
+
+```{r}
+of_oaa_2024 <- read_csv("../../data/of_oaa_2024.csv") %>%
+                mutate(player_id = as.factor(player_id))
+
+oaa_rounding_check <- of_catch_prob_2024 %>%
+                        mutate(catch_rate_upper = pmin(0.999999, catch_rate - 0.02),
+                               catch_rate_lower = pmin(0.999999, catch_rate + 0.02)) %>%
+                        group_by(player_id, player) %>%
+                        summarize(opp = n(),
+                                  oaa_lower = round(sum(out * (1 - catch_rate_lower) - (1 - out) * catch_rate_lower)),
+                                  oaa_estimate = sum(out * (1 - catch_rate) - (1 - out) * catch_rate),
+                                  oaa_upper = round(sum(out * (1 - catch_rate_upper) - (1 - out) * catch_rate_upper))) %>%
+                        ungroup() %>%
+                        left_join(of_oaa_2024, by = "player_id") %>%
+                        select(player_id, name = player, opp,
+                               oaa_lower, oaa_estimate, oaa_upper, oaa_true = oaa)
+
+oaa_rounding_check %>%
+  summarize(any(oaa_true < oaa_lower | oaa_true > oaa_upper))
+
+set.seed(0)
+jan8 <- oaa_rounding_check %>%
+          filter(opp > 162) %>%
+          group_by(oaa_true) %>%
+          sample_n(1) %>%
+          ggplot(aes(x = oaa_true, y = oaa_estimate)) +
+            geom_linerange(aes(ymin = oaa_lower, ymax = oaa_upper), col = "sienna4", linewidth = 0.75) +
+            geom_point(size = 2, stroke = 1, pch = 21, fill = "burlywood1", col = "sienna4") +
+            geom_abline(intercept = 0, slope = 1, linetype = "dashed", col = "gray40") +
+            theme_minimal() +
+            labs(x = "OAA reported by Baseball Savant",
+                 y = "OAA estimated using scraped data",
+                 title = "Actual vs. estimated OAA for selected players, 2024",
+                 subtitle = "Lower and upper bounds computed by changing each catch rate by +/-0.02") +
+            theme(axis.title = element_text(face = "bold"),
+                  axis.text = element_text(face = "bold"),
+                  title = element_text(face = "bold"))
+
+jan8
+
+ggsave("../../figures/jan8.png", plot = jan8, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+# January 9th
+
+```{r}
+jan9 <- of_catch_prob_2024 %>%
+          mutate(highlight = (hang_time < 3 & distance > 50) | (hang_time < 3.8 & distance > 75)) %>%
+          ggplot(aes(x = distance, y = hang_time, col = highlight, size = highlight)) +
+            geom_point() +
+            scale_colour_manual(values = c("gray40", "darkorange3")) + 
+            scale_size_manual(values = c(0.25, 2)) +
+            theme_minimal() +
+            theme(legend.position = "none",
+                  axis.title = element_text(face = "bold"),
+                  axis.text = element_text(face = "bold"),
+                  title = element_text(face = "bold")) +
+            labs(x = "Distance between outfielder's starting spot and ball's landing spot (feet)",
+                 y = "Hang time (seconds)",
+                 title = "Distance vs. hang time for every ball hit to the outfield in 2024")
+
+jan9
+
+ggsave("../../figures/jan9.png", plot = jan9, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+# January 17th
+
+```{r}
+jan17_1 <- of_catch_prob_2024 %>%
+              mutate(stadium = fct_recode(stadium,
+                                        "AmFam Field" = "American Family Field",
+                                        "Guaranteed Rate" = "Guaranteed Rate Field",
+                                        "Camden Yards" = "Oriole Park at Camden Yards",
+                                        "Great American" = "Great American Ball Park",
+                                        "Citizens Bank" = "Citizens Bank Park"
+              )) %>%
+              ggplot(aes(x = landing_pos_x, y = landing_pos_y)) +
+                geom_point(size = 0.25, alpha = 0.25, col = "slategray4") +
+                facet_wrap(~stadium, scales = "fixed") +
+                theme_bw() +
+                labs(x = "Horizontal distance from home plate (ft)",
+                     y = "Vertical distance from home plate (ft)",
+                     title = "Landing positions of fly balls by stadium, 2024") +
+                theme(axis.title = element_text(face = "bold"),
+                      title = element_text(face = "bold"),
+                      plot.subtitle = element_text(face = "italic"),
+                      strip.background = element_rect(fill = "wheat4", color = "gray10"),
+                      strip.text = element_text(face = "bold", color = "white")) +
+                scale_x_continuous(breaks = c(-200, 0, 200)) +
+                scale_y_continuous(breaks = c(200, 400))
+
+jan17_1
+
+ggsave("../../figures/jan17_1.png", plot = jan17_1, height = 6, width = 8)
+```
+
+```{r}
+jan17_2 <- of_catch_prob_2024 %>%
+              mutate(stadium = fct_recode(stadium,
+                                        "AmFam Field" = "American Family Field",
+                                        "Guaranteed Rate" = "Guaranteed Rate Field",
+                                        "Camden Yards" = "Oriole Park at Camden Yards",
+                                        "Great American" = "Great American Ball Park",
+                                        "Citizens Bank" = "Citizens Bank Park"
+              )) %>%
+              ggplot(aes(x = start_pos_x, y = start_pos_y)) +
+                geom_point(size = 0.25, alpha = 0.25, col = "slategray4") +
+                facet_wrap(~stadium, scales = "fixed") +
+                theme_bw() +
+                labs(x = "Horizontal distance from home plate (ft)",
+                     y = "Vertical distance from home plate (ft)",
+                     title = "Starting positions of outfielders by stadium, 2024") +
+                theme(axis.title = element_text(face = "bold"),
+                      title = element_text(face = "bold"),
+                      plot.subtitle = element_text(face = "italic"),
+                      strip.background = element_rect(fill = "wheat4", color = "gray10"),
+                      strip.text = element_text(face = "bold", color = "white")) +
+                scale_x_continuous(breaks = c(-200, 0, 200)) +
+                scale_y_continuous(breaks = c(200, 400))
+
+jan17_2
+
+ggsave("../../figures/jan17_2.png", plot = jan17_2, height = 6, width = 8)
+```
+
+
+
+\newpage
+
+# January 18th
+
+```{r}
+stadium_dims <- of_catch_prob_2024 %>%
+                  distinct(stadium, .keep_all = TRUE) %>%
+                  select(stadium, starts_with("wall_height"), starts_with("dist_"))
+
+pca <- prcomp(stadium_dims %>% select(-stadium), center = TRUE, scale = TRUE)
+
+pca
+
+summary(pca)
+```
+
+```{r}
+set.seed(18)
+
+jan18 <- tibble(stadium = stadium_dims$stadium,
+                pc1 = pca$x[,1], pc2 = pca$x[,2], pc3 = pca$x[,3]) %>%
+            ggplot(aes(x = pc1, y = pc2)) +
+              ggrepel::geom_text_repel(aes(label = stadium), fontface = "bold", col = "firebrick4",
+                                       min.segment.length = 1,
+                                       label.padding = 0.0, box.padding = 0.05, point.padding = 0,
+                                       size = 2, max.overlaps = 30) +
+              theme_classic() +
+              labs(title = "First two principal component scores for MLB stadium shapes",
+                   x = "PC1 (deep corners, short LF wall ->)",
+                   y = "PC2 (shallow CF and RF, short CF wall ->)") +
+              theme(axis.title = element_text(face = "bold"),
+                    title = element_text(face = "bold"))
+
+jan18
+
+ggsave("../../figures/jan18.png", plot = jan18, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+
+# January 21st
+
+```{r}
+players_to_keep <- of_catch_prob_2024 %>% count(player) %>% filter(n >= 50) %>% pull(player)
+df <- of_catch_prob_2024 %>%
+        filter(player %in% players_to_keep) %>%
+        filter(stars < 6)
+model <- glm(out ~ pos*route_direction + wall + distance + hang_time + player + stadium,
+             family = "binomial", data = df)
+
+summary(model)$coefficients[,1:2] %>% as.data.frame() %>% View()
+```
+
+
+
+# Later
+
+```{r}
+of_catch_prob_2024 %>%
+  ggplot(aes(x = landing_pos_x, y = landing_pos_y, col = as.factor(ball_section))) +
+    geom_point(alpha = 1, size = 1)
+```
+
+```{r}
+of_catch_prob_2024 %>%
+  ggplot(aes(x = distance, y = hang_time, col = catch_rate)) +
+    geom_point(alpha = 1)
+```
+
+```{r}
+of_catch_prob_2024 %>%
+  filter(stars <= 5) %>%
+  mutate(stars = as.factor(stars)) %>%
+  ggplot(aes(x = distance, y = hang_time, col = stars)) +
+    geom_point(alpha = 0.1) +
+    facet_grid(rows = vars(wall), cols = vars(back))
+
+of_catch_prob_2024 %>%
+  filter(stars <= 5) %>%
+  mutate(stars = as.factor(stars)) %>%
+  ggplot(aes(x = distance, y = hang_time, col = catch_rate)) +
+    geom_point(alpha = 0.1) +
+    facet_grid(rows = vars(wall), cols = vars(back))
+```
+
+
+
+
