@@ -398,14 +398,52 @@ ggsave("../../figures/jan18.png", plot = jan18, height = 4, width = 6)
 
 \newpage
 
-# Later
+# January 21st
+
+```{r}
+set.seed(121)
+
+play_ids <- of_catch_prob_2024 %>%
+              filter(distance > 60) %>%
+              filter(route_angle %% 60 > 20) %>%
+              group_by(route_direction) %>% sample_n(1) %>% pull(play_id)
+
+jan21 <- of_catch_prob_2024 %>%
+          filter(play_id %in% play_ids) %>%
+          mutate(route_angle = paste0("route angle = ", round(route_angle), " degrees")) %>%
+          ggplot() +
+            geom_segment(aes(x = start_pos_x, y = start_pos_y,
+                             xend = landing_pos_x, yend = landing_pos_y),
+                         arrow = arrow(length = unit(0.1, "inches"))) +
+            geom_segment(aes(x = start_pos_x, y = start_pos_y,
+                             xend = 0, yend = 0)) +
+            geom_abline(aes(intercept = (start_pos_x^2 + start_pos_y^2) / start_pos_y,
+                            slope = -start_pos_x/start_pos_y), color = "gray40", linetype = "dotted") +
+            geom_point(x = 0, y = 0, pch = 15) +
+            geom_point(aes(x = start_pos_x, y = start_pos_y), col = "steelblue4", size = 3, pch = 17) +
+            geom_point(aes(x = landing_pos_x, y = landing_pos_y), color = "firebrick3", size = 3) +
+            facet_wrap(~route_angle) +
+            labs(x = "Horizontal distance from home plate (ft)",
+                 y = "Vertical distance from home plate (ft)") +
+            xlim(c(-200,200)) + ylim(c(0,400)) + coord_fixed() +
+            theme_bw()
+
+ggsave("../../figures/jan21.png", plot = jan21, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+# Scratch
 
 ```{r eval = FALSE}
-players_to_keep <- of_catch_prob_2024 %>% count(player) %>% filter(n >= 50) %>% pull(player)
+players_to_keep <- of_catch_prob_2024 %>% count(player) %>% filter(n >= 25) %>% pull(player)
 df <- of_catch_prob_2024 %>%
         filter(player %in% players_to_keep) %>%
-        filter(stars < 6)
-model <- glm(out ~ pos*route_direction + wall + distance + hang_time + player + stadium,
+        filter(stars < 6) %>%
+        mutate(close_to_wall = as.factor(abs(ball_distance - relevant_wall_distance) < 5))
+model <- glm(out ~ pos*route_direction + wall + distance + hang_time + stadium + player,
              family = "binomial", data = df)
 ```
 
