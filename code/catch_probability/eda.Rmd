@@ -435,6 +435,20 @@ ggsave("../../figures/jan21.png", plot = jan21, height = 4, width = 6)
 
 \newpage
 
+# January 22nd
+
+```{r}
+of_catch_prob_2024 %>%
+  count(back_bs = as.factor(of_catch_prob_2024$back),
+        back_mine = as.factor(ifelse(
+          of_catch_prob_2024$route_direction == "back_middle", 
+          1, 0)))
+```
+
+
+
+\newpage
+
 # Scratch
 
 ```{r eval = FALSE}
