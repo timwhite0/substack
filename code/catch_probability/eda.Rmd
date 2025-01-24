@@ -449,6 +449,52 @@ of_catch_prob_2024 %>%
 
 \newpage
 
+# January 23rd
+
+```{r}
+jan23 <- of_catch_prob_2024 %>%
+          filter(play_id == "925eb5a8-b6ff-42ca-ab2e-3ac950c76259") %>%
+          mutate(route_angle = paste0("route angle = ", round(route_angle), " degrees")) %>%
+          ggplot() +
+            geom_segment(aes(x = start_pos_x, y = start_pos_y,
+                             xend = landing_pos_x, yend = landing_pos_y),
+                         arrow = arrow(length = unit(0.1, "inches"))) +
+            geom_segment(aes(x = start_pos_x, y = start_pos_y,
+                             xend = 0, yend = 0)) +
+            geom_abline(aes(intercept = (start_pos_x^2 + start_pos_y^2) / start_pos_y,
+                            slope = -start_pos_x/start_pos_y), color = "gray40", linetype = "dotted") +
+            geom_point(x = 0, y = 0, pch = 15) +
+            geom_point(aes(x = start_pos_x, y = start_pos_y), col = "steelblue4", size = 3, pch = 17) +
+            geom_point(aes(x = landing_pos_x, y = landing_pos_y), color = "firebrick3", size = 3) +
+            facet_wrap(~route_angle) +
+            labs(x = "Horizontal distance from home plate (ft)",
+                 y = "Vertical distance from home plate (ft)") +
+            xlim(c(-200,200)) + ylim(c(0,400)) + coord_fixed() +
+            theme_bw()
+
+ggsave("../../figures/jan23.png", plot = jan23, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+# January 24th
+
+```{r}
+of_catch_prob_2024 %>%
+  ggplot(aes(x = landing_pos_x - start_pos_x,
+             y = landing_pos_y - start_pos_y)) + facet_grid(rows = vars(back), cols = vars(pos)) + geom_point(size = 1, alpha = 0.1)
+
+of_catch_prob_2024 %>% mutate(back2 = ifelse(route_direction == "back_middle", 1, 0)) %>%
+  ggplot(aes(x = landing_pos_x - start_pos_x,
+             y = landing_pos_y - start_pos_y)) + facet_grid(rows = vars(back2), cols = vars(pos)) + geom_point(size = 1, alpha = 0.1)
+```
+
+
+
+\newpage
+
 # Scratch
 
 ```{r eval = FALSE}
