@@ -472,6 +472,8 @@ jan23 <- of_catch_prob_2024 %>%
             xlim(c(-200,200)) + ylim(c(0,400)) + coord_fixed() +
             theme_bw()
 
+jan23
+
 ggsave("../../figures/jan23.png", plot = jan23, height = 4, width = 6)
 ```
 
@@ -482,13 +484,27 @@ ggsave("../../figures/jan23.png", plot = jan23, height = 4, width = 6)
 # January 24th
 
 ```{r}
-of_catch_prob_2024 %>%
-  ggplot(aes(x = landing_pos_x - start_pos_x,
-             y = landing_pos_y - start_pos_y)) + facet_grid(rows = vars(back), cols = vars(pos)) + geom_point(size = 1, alpha = 0.1)
+set.seed(124)
 
-of_catch_prob_2024 %>% mutate(back2 = ifelse(route_direction == "back_middle", 1, 0)) %>%
-  ggplot(aes(x = landing_pos_x - start_pos_x,
-             y = landing_pos_y - start_pos_y)) + facet_grid(rows = vars(back2), cols = vars(pos)) + geom_point(size = 1, alpha = 0.1)
+jan24 <- of_catch_prob_2024 %>%
+          sample_n(5000) %>%
+          mutate(route_distance = sqrt(
+            (landing_pos_x - start_pos_x)^2 + (landing_pos_y - start_pos_y)^2)
+          ) %>%
+          ggplot(aes(x = distance, y = route_distance)) +
+            geom_point(size = 1, alpha = 0.1, color = "springgreen4") +
+            labs(x = "Distance reported by Baseball Savant (ft)",
+                 y = "Distance of straight-line route from fielder to ball (ft)",
+                 title = "Statcast distances vs. straight-line route distances",
+                 subtitle = "5,000 randomly sampled fly balls from the 2024 season") +
+            theme_bw() +
+            theme(axis.title = element_text(face = "bold"),
+                  axis.text = element_text(face = "bold"),
+                  title = element_text(face = "bold"))
+
+jan24
+
+ggsave("../../figures/jan24.png", plot = jan24, height = 4, width = 6)
 ```
 
 
@@ -498,12 +514,14 @@ of_catch_prob_2024 %>% mutate(back2 = ifelse(route_direction == "back_middle", 1
 # Scratch
 
 ```{r eval = FALSE}
-players_to_keep <- of_catch_prob_2024 %>% count(player) %>% filter(n >= 25) %>% pull(player)
+players_to_keep <- of_catch_prob_2024 %>% count(player) %>% filter(n >= 50) %>% pull(player)
 df <- of_catch_prob_2024 %>%
         filter(player %in% players_to_keep) %>%
         filter(stars < 6) %>%
+        mutate(route_distance = sqrt((landing_pos_x - start_pos_x)^2 + (landing_pos_y - start_pos_y)^2)) %>%
+        filter(abs(route_distance - distance) < 5) %>%
         mutate(close_to_wall = as.factor(abs(ball_distance - relevant_wall_distance) < 5))
-model <- glm(out ~ pos*route_direction + wall + distance + hang_time + stadium + player,
+model <- glm(out ~ pos*route_direction + wall + route_distance + hang_time + stadium + player,
              family = "binomial", data = df)
 ```
 
