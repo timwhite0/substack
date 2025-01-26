@@ -439,9 +439,9 @@ ggsave("../../figures/jan21.png", plot = jan21, height = 4, width = 6)
 
 ```{r}
 of_catch_prob_2024 %>%
-  count(back_bs = as.factor(of_catch_prob_2024$back),
+  count(back_bs = as.factor(back),
         back_mine = as.factor(ifelse(
-          of_catch_prob_2024$route_direction == "back_middle", 
+          route_direction == "back_middle", 
           1, 0)))
 ```
 
@@ -505,6 +505,88 @@ jan24 <- of_catch_prob_2024 %>%
 jan24
 
 ggsave("../../figures/jan24.png", plot = jan24, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+# January 25th
+
+```{r}
+jan25_data <- of_catch_prob_2024 %>%
+                mutate(route_distance = sqrt(
+                  (landing_pos_x - start_pos_x)^2 + (landing_pos_y - start_pos_y)^2)) %>%
+                select(player, team, game_pk, play_id,
+                       distance, route_distance, route_angle, ball_distance, everything())
+
+jan25_id1 <- jan25_data %>%
+              filter(abs(distance) < 5) %>%
+              arrange(desc(route_distance)) %>%
+              pull(play_id) %>% head(1)
+
+jan25_id2 <- jan25_data %>%
+              filter(abs(route_distance) < 5) %>%
+              arrange(desc(distance)) %>%
+              head(1) %>% pull(play_id)
+
+jan25_id3 <- jan25_data %>%
+              arrange(desc((route_distance - distance))) %>%
+              head(1) %>% pull(play_id)
+
+jan25_id4 <- jan25_data %>%
+              arrange(desc((distance - route_distance))) %>%
+              head(1) %>% pull(play_id)
+```
+
+```{r}
+jan25_1 <- of_catch_prob_2024 %>%
+            filter(play_id %in% c(jan25_id1, jan25_id2, jan25_id3, jan25_id4)) %>%
+            ggplot() +
+              geom_segment(aes(x = start_pos_x, y = start_pos_y,
+                               xend = landing_pos_x, yend = landing_pos_y),
+                           arrow = arrow(length = unit(0.1, "inches"))) +
+              geom_segment(aes(x = start_pos_x, y = start_pos_y,
+                               xend = 0, yend = 0)) +
+              geom_abline(aes(intercept = (start_pos_x^2 + start_pos_y^2) / start_pos_y,
+                              slope = -start_pos_x/start_pos_y), color = "gray40", linetype = "dotted") +
+              geom_point(x = 0, y = 0, pch = 15) +
+              geom_point(aes(x = start_pos_x, y = start_pos_y), col = "steelblue4", size = 3, pch = 17) +
+              geom_point(aes(x = landing_pos_x, y = landing_pos_y), color = "firebrick3", size = 3) +
+              facet_wrap(~player) +
+              labs(x = "Horizontal distance from home plate (ft)",
+                   y = "Vertical distance from home plate (ft)") +
+              xlim(c(-200,200)) + ylim(c(0,400)) + coord_fixed() +
+              theme_bw()
+
+jan25_1
+
+ggsave("../../figures/jan25_1.png", plot = jan25_1, height = 3, width = 6)
+```
+
+```{r}
+jan25_data %>%
+  mutate(d = abs(route_distance - distance)) %>%
+  summarize(mean(d > 5))
+
+jan25_data %>%
+  mutate(d = abs(route_distance - distance)) %>%
+  summarize(mean(d > 10))
+
+jan25_2 <- jan25_data %>%
+            ggplot(aes(x = route_distance - distance)) +
+              geom_histogram(bins = 500, col = "steelblue4") +
+              xlim(c(-20, 20)) +
+              labs(x = "route_distance - distance",
+                   y = "Frequency") +
+              theme_bw() +
+              theme(axis.title = element_text(face = "bold"),
+                    axis.text = element_text(face = "bold"),
+                    title = element_text(face = "bold"))
+
+jan25_2
+
+ggsave("../../figures/jan25_2.png", plot = jan25_2, height = 4, width = 6)
 ```
 
 
