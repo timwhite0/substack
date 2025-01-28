@@ -363,7 +363,8 @@ ggsave("../../figures/jan17_2.png", plot = jan17_2, height = 6, width = 8)
 ```{r}
 stadium_dims <- of_catch_prob_2024 %>%
                   distinct(stadium, .keep_all = TRUE) %>%
-                  select(stadium, starts_with("wall_height"), starts_with("dist_"))
+                  select(stadium, starts_with("wall_height"),
+                         wall_dist_lf, wall_dist_lc, wall_dist_cf, wall_dist_rc, wall_dist_rf)
 
 pca <- prcomp(stadium_dims %>% select(-stadium), center = TRUE, scale = TRUE)
 
@@ -597,42 +598,19 @@ ggsave("../../figures/jan25_2.png", plot = jan25_2, height = 4, width = 6)
 
 ```{r}
 jan26_data <- of_catch_prob_2024 %>%
-                mutate(wall_lf_x = dist_lf * cos((90 + 45) * pi / 180),
-                       wall_lf_y = dist_lf * sin((90 + 45) * pi / 180),
-                       wall_lc_x = dist_lc * cos((90 + 22.5) * pi / 180),
-                       wall_lc_y = dist_lc * sin((90 + 22.5) * pi / 180),
-                       wall_cf_x = dist_cf * cos((90 + 0) * pi / 180),
-                       wall_cf_y = dist_cf * sin((90 + 0) * pi / 180),
-                       wall_rc_x = dist_rc * cos((90 - 22.5) * pi / 180),
-                       wall_rc_y = dist_rc * sin((90 - 22.5) * pi / 180),
-                       wall_rf_x = dist_rf * cos((90 - 45) * pi / 180),
-                       wall_rf_y = dist_rf * sin((90 - 45) * pi / 180)) %>%
-                mutate(dist_to_lf = sqrt((landing_pos_x - wall_lf_x)^2 + (landing_pos_y - wall_lf_y)^2),
-                       dist_to_lc = sqrt((landing_pos_x - wall_lc_x)^2 + (landing_pos_y - wall_lc_y)^2),
-                       dist_to_cf = sqrt((landing_pos_x - wall_cf_x)^2 + (landing_pos_y - wall_cf_y)^2),
-                       dist_to_rc = sqrt((landing_pos_x - wall_rc_x)^2 + (landing_pos_y - wall_rc_y)^2),
-                       dist_to_rf = sqrt((landing_pos_x - wall_rf_x)^2 + (landing_pos_y - wall_rf_y)^2)) %>%
-                mutate(closest = pmin(dist_to_lf, dist_to_lc, dist_to_cf, dist_to_rc, dist_to_rf)) %>%
-                mutate(closest_wall = as.factor(case_when(
-                  dist_to_lf == closest ~ "LF",
-                  dist_to_lc == closest ~ "LC",
-                  dist_to_cf == closest ~ "CF",
-                  dist_to_rc == closest ~ "RC",
-                  dist_to_rf == closest ~ "RF"
-                ))) %>%
                 filter(stadium == "Comerica Park")
 
 jan26 <- ggplot() +
-  geom_point(data = jan26_data, aes(x = landing_pos_x, y = landing_pos_y, col = closest_wall)) +
-  annotate("text", x = unique(jan26_data$wall_lf_x), y = unique(jan26_data$wall_lf_y),
+  geom_point(data = jan26_data, aes(x = landing_pos_x, y = landing_pos_y, col = as.factor(closest_wall))) +
+  annotate("text", x = unique(jan26_data$wall_dist_lf_x), y = unique(jan26_data$wall_dist_lf_y),
            fontface = "bold", label = "X") +
-  annotate("text", x = unique(jan26_data$wall_lc_x), y = unique(jan26_data$wall_lc_y),
+  annotate("text", x = unique(jan26_data$wall_dist_lc_x), y = unique(jan26_data$wall_dist_lc_y),
            fontface = "bold",  label = "X") +
-  annotate("text", x = unique(jan26_data$wall_cf_x), y = unique(jan26_data$wall_cf_y),
+  annotate("text", x = unique(jan26_data$wall_dist_cf_x), y = unique(jan26_data$wall_dist_cf_y),
            fontface = "bold",  label = "X") +
-  annotate("text", x = unique(jan26_data$wall_rc_x), y = unique(jan26_data$wall_rc_y),
+  annotate("text", x = unique(jan26_data$wall_dist_rc_x), y = unique(jan26_data$wall_dist_rc_y),
            fontface = "bold",  label = "X") +
-  annotate("text", x = unique(jan26_data$wall_rf_x), y = unique(jan26_data$wall_rf_y),
+  annotate("text", x = unique(jan26_data$wall_dist_rf_x), y = unique(jan26_data$wall_dist_rf_y),
            fontface = "bold",  label = "X") +
   theme_bw() +
   theme(legend.position = "none") +
@@ -647,6 +625,18 @@ jan26 <- ggplot() +
 jan26
 
 ggsave("../../figures/jan26.png", plot = jan26, height = 4, width = 6)
+```
+
+
+
+\newpage
+
+# January 27th
+
+```{r}
+jan26_data %>%
+  mutate(wall_ball = ifelse(relevant_wall_distance - ball_distance < 30, 1, 0)) %>%
+  ggplot(aes(x = landing_pos_x, y = landing_pos_y, col = as.factor(wall_ball))) + geom_point()
 ```
 
 

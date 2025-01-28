@@ -119,21 +119,18 @@ clean_of_catch_prob_data <- function(year) {
   dimensions_colnames <- dimensions_table[[1]] %>% janitor::row_to_names(row_number=1) %>%
                           select(stadium = "Stadium (see notes)",
                                  wall_height_lf = "LF", wall_height_cf = "CF",
-                                 wall_height_rf = "RF", dist_lf = "Left field",
-                                 dist_lc = "Left-center", dist_cf = "Center field",
-                                 dist_rc = "Right-center", dist_rf = "Right field") %>%
+                                 wall_height_rf = "RF", wall_dist_lf = "Left field",
+                                 wall_dist_lc = "Left-center", wall_dist_cf = "Center field",
+                                 wall_dist_rc = "Right-center", wall_dist_rf = "Right field") %>%
                           colnames()
   dimensions_data <- dimensions_table[[2]] %>%
                         select(X1, X12, X13, X14, X17, X18, X19, X20, X21) %>%
                         rename_with(~dimensions_colnames) %>%
                         mutate(stadium = as.factor(stadium)) %>%
                         mutate(stadium = str_remove_all(stadium, " \\*")) %>%
-                        mutate(across(contains("wall"),
+                        mutate(across(contains("wall_"),
                                       function(col) {str_remove_all(col, "[()\\[\\]]")})) %>%
-                        mutate(across(contains("wall"), as.numeric)) %>%
-                        mutate(across(contains("dist"),
-                                      function(col) {str_remove_all(col, "[()\\[\\]]")})) %>%
-                        mutate(across(contains("dist"), as.numeric)) %>%
+                        mutate(across(contains("wall_"), as.numeric)) %>%
                         mutate(stadium = fct_recode(stadium,
                                         "Old Yankee Stadium" = "Yankee Stadium",
                                         "Yankee Stadium" = "Yankee Stadium II",
@@ -146,13 +143,44 @@ clean_of_catch_prob_data <- function(year) {
                                         "Truist Park" = "Truist (ex-SunTrust) Park"))
   of_catch_prob_teams_stadiums_dims <- of_catch_prob_teams_stadiums %>%
                                           left_join(dimensions_data, by = "stadium") %>%
+                                          mutate(wall_dist_lf_x = wall_dist_lf * cos((90 + 45) * pi / 180),
+                                                 wall_dist_lf_y = wall_dist_lf * sin((90 + 45) * pi / 180),
+                                                 wall_dist_lc_x = wall_dist_lc * cos((90 + 22.5) * pi / 180),
+                                                 wall_dist_lc_y = wall_dist_lc * sin((90 + 22.5) * pi / 180),
+                                                 wall_dist_cf_x = wall_dist_cf * cos((90 + 0) * pi / 180),
+                                                 wall_dist_cf_y = wall_dist_cf * sin((90 + 0) * pi / 180),
+                                                 wall_dist_rc_x = wall_dist_rc * cos((90 - 22.5) * pi / 180),
+                                                 wall_dist_rc_y = wall_dist_rc * sin((90 - 22.5) * pi / 180),
+                                                 wall_dist_rf_x = wall_dist_rf * cos((90 - 45) * pi / 180),
+                                                 wall_dist_rf_y = wall_dist_rf * sin((90 - 45) * pi / 180)) %>%
+                                          mutate(dist_to_lf = sqrt(
+                                                   (landing_pos_x - wall_dist_lf_x)^2 + (landing_pos_y - wall_dist_lf_y)^2),
+                                                 dist_to_lc = sqrt(
+                                                   (landing_pos_x - wall_dist_lc_x)^2 + (landing_pos_y - wall_dist_lc_y)^2),
+                                                 dist_to_cf = sqrt(
+                                                   (landing_pos_x - wall_dist_cf_x)^2 + (landing_pos_y - wall_dist_cf_y)^2),
+                                                 dist_to_rc = sqrt(
+                                                   (landing_pos_x - wall_dist_rc_x)^2 + (landing_pos_y - wall_dist_rc_y)^2),
+                                                 dist_to_rf = sqrt(
+                                                   (landing_pos_x - wall_dist_rf_x)^2 + (landing_pos_y - wall_dist_rf_y)^2)) %>%
+                                          mutate(closest = pmin(dist_to_lf, dist_to_lc, dist_to_cf, dist_to_rc, dist_to_rf)) %>%
                                           mutate(relevant_wall_distance = case_when(
-                                            ball_angle <= -33.75 ~ dist_lf,
-                                            ball_angle <= -11.25 ~ dist_lc,
-                                            ball_angle <= 11.25 ~ dist_cf,
-                                            ball_angle <= 33.75 ~ dist_rc,
-                                            ball_angle > 33.75 ~ dist_rf
-                                          ))
+                                            dist_to_lf == closest ~ wall_dist_lf,
+                                            dist_to_lc == closest ~ wall_dist_lc,
+                                            dist_to_cf == closest ~ wall_dist_cf,
+                                            dist_to_rc == closest ~ wall_dist_rc,
+                                            dist_to_rf == closest ~ wall_dist_rf
+                                          )) %>%
+                                          mutate(closest_wall = as.factor(case_when(
+                                            dist_to_lf == closest ~ "LF",
+                                            dist_to_lc == closest ~ "LC",
+                                            dist_to_cf == closest ~ "CF",
+                                            dist_to_rc == closest ~ "RC",
+                                            dist_to_rf == closest ~ "RF"
+                                          ))) %>%
+                                          select(-contains("norm_start_pos"),
+                                                 -a1, -a2, -b1, -b2, -eta, -eta_adjusted,
+                                                 -contains("dist_to_"), -closest)
   
   return(of_catch_prob_teams_stadiums_dims)
 }
