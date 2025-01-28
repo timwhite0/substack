@@ -634,9 +634,12 @@ ggsave("../../figures/jan26.png", plot = jan26, height = 4, width = 6)
 # January 27th
 
 ```{r}
-jan26_data %>%
-  mutate(wall_ball = ifelse(relevant_wall_distance - ball_distance < 30, 1, 0)) %>%
-  ggplot(aes(x = landing_pos_x, y = landing_pos_y, col = as.factor(wall_ball))) + geom_point()
+jan27 <- jan26 + geom_segment(aes(x = 50, xend = 100, y = 150, yend = 250),
+                     arrow = arrow(length = unit(0.25, "cm")))
+
+jan27
+
+ggsave("../../figures/jan27.png", plot = jan27, height = 4, width = 6)
 ```
 
 
