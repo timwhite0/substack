@@ -736,4 +736,16 @@ ggsave("../../figures/jan28_2.png", plot = jan28_2, height = 6, width = 8)
 
 
 
+\newpage
+
+# January 29th
+
+```{r}
+of_catch_prob_2024 %>%
+  mutate(wall_ball = as.factor(ifelse(relevant_wall_distance - ball_distance < 8, 1, 0))) %>%
+  count(statcast = wall, me = wall_ball)
+```
+
+
+
 
