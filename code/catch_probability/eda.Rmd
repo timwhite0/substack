@@ -32,7 +32,8 @@ of_catch_prob_2024 <- read_csv("../../data/of_catch_prob_2024.csv") %>%
                                pos = as.factor(pos),
                                route_direction = as.factor(route_direction),
                                ball_section = as.factor(ball_section),
-                               stadium = as.factor(stadium))
+                               stadium = as.factor(stadium),
+                               closest_wall = as.factor(closest_wall))
   
 of_catch_prob_2023 <- read_csv("../../data/of_catch_prob_2023.csv") %>%
                         mutate(player = as.factor(player),
@@ -43,7 +44,8 @@ of_catch_prob_2023 <- read_csv("../../data/of_catch_prob_2023.csv") %>%
                                pos = as.factor(pos),
                                route_direction = as.factor(route_direction),
                                ball_section = as.factor(ball_section),
-                               stadium = as.factor(stadium))
+                               stadium = as.factor(stadium),
+                               closest_wall = as.factor(closest_wall))
 ```
 
 
@@ -597,20 +599,20 @@ ggsave("../../figures/jan25_2.png", plot = jan25_2, height = 4, width = 6)
 # January 26th
 
 ```{r}
-jan26_data <- of_catch_prob_2024 %>%
+copa2024 <- of_catch_prob_2024 %>%
                 filter(stadium == "Comerica Park")
 
 jan26 <- ggplot() +
-  geom_point(data = jan26_data, aes(x = landing_pos_x, y = landing_pos_y, col = as.factor(closest_wall))) +
-  annotate("text", x = unique(jan26_data$wall_dist_lf_x), y = unique(jan26_data$wall_dist_lf_y),
+  geom_point(data = copa2024, aes(x = landing_pos_x, y = landing_pos_y, col = closest_wall)) +
+  annotate("text", x = unique(copa2024$wall_dist_lf_x), y = unique(copa2024$wall_dist_lf_y),
            fontface = "bold", label = "X") +
-  annotate("text", x = unique(jan26_data$wall_dist_lc_x), y = unique(jan26_data$wall_dist_lc_y),
+  annotate("text", x = unique(copa2024$wall_dist_lc_x), y = unique(copa2024$wall_dist_lc_y),
            fontface = "bold",  label = "X") +
-  annotate("text", x = unique(jan26_data$wall_dist_cf_x), y = unique(jan26_data$wall_dist_cf_y),
+  annotate("text", x = unique(copa2024$wall_dist_cf_x), y = unique(copa2024$wall_dist_cf_y),
            fontface = "bold",  label = "X") +
-  annotate("text", x = unique(jan26_data$wall_dist_rc_x), y = unique(jan26_data$wall_dist_rc_y),
+  annotate("text", x = unique(copa2024$wall_dist_rc_x), y = unique(copa2024$wall_dist_rc_y),
            fontface = "bold",  label = "X") +
-  annotate("text", x = unique(jan26_data$wall_dist_rf_x), y = unique(jan26_data$wall_dist_rf_y),
+  annotate("text", x = unique(copa2024$wall_dist_rf_x), y = unique(copa2024$wall_dist_rf_y),
            fontface = "bold",  label = "X") +
   theme_bw() +
   theme(legend.position = "none") +
@@ -620,7 +622,7 @@ jan26 <- ggplot() +
   labs(title = "Closest wall measurement for all Comerica Park fly balls, 2024",
        x = "Horizontal distance from home plate (ft)",
        y = "Vertical distance from home plate (ft)") +
-  scale_color_brewer(palette = "Set2")
+  scale_color_brewer(palette = "Set1")
 
 jan26
 
@@ -646,46 +648,90 @@ ggsave("../../figures/jan27.png", plot = jan27, height = 4, width = 6)
 
 \newpage
 
-# Scratch
-
-```{r eval = FALSE}
-players_to_keep <- of_catch_prob_2024 %>% count(player) %>% filter(n >= 50) %>% pull(player)
-df <- of_catch_prob_2024 %>%
-        filter(player %in% players_to_keep) %>%
-        filter(stars < 6) %>%
-        mutate(route_distance = sqrt((landing_pos_x - start_pos_x)^2 + (landing_pos_y - start_pos_y)^2)) %>%
-        filter(abs(route_distance - distance) < 5) %>%
-        mutate(close_to_wall = as.factor(abs(ball_distance - relevant_wall_distance) < 5))
-model <- glm(out ~ pos*route_direction + wall + route_distance + hang_time + stadium + player,
-             family = "binomial", data = df)
-```
+# January 28th
 
 ```{r}
-of_catch_prob_2024 %>%
-  ggplot(aes(x = landing_pos_x, y = landing_pos_y, col = as.factor(ball_section))) +
-    geom_point(alpha = 1, size = 1)
+jan28_1 <- jan26 +
+  annotate("text", x = unique(copa2024$wall_dist_lflc_x), y = unique(copa2024$wall_dist_lflc_y),
+           fontface = "bold", label = "+", cex = 7) +
+  annotate("text", x = unique(copa2024$wall_dist_lccf_x), y = unique(copa2024$wall_dist_lccf_y),
+           fontface = "bold", label = "+", cex = 7) +
+  annotate("text", x = unique(copa2024$wall_dist_cfrc_x), y = unique(copa2024$wall_dist_cfrc_y),
+           fontface = "bold", label = "+", cex = 7) +
+  annotate("text", x = unique(copa2024$wall_dist_rcrf_x), y = unique(copa2024$wall_dist_rcrf_y),
+           fontface = "bold", label = "+", cex = 7)
+
+jan28_1
+
+ggsave("../../figures/jan28_1.png", plot = jan28_1, height = 4, width = 6)
 ```
 
-```{r}
-of_catch_prob_2024 %>%
-  ggplot(aes(x = distance, y = hang_time, col = catch_rate)) +
-    geom_point(alpha = 1)
-```
+
 
 ```{r}
-of_catch_prob_2024 %>%
-  filter(stars <= 5) %>%
-  mutate(stars = as.factor(stars)) %>%
-  ggplot(aes(x = distance, y = hang_time, col = stars)) +
-    geom_point(alpha = 0.1) +
-    facet_grid(rows = vars(wall), cols = vars(back))
+df <- of_catch_prob_2024 %>% group_by(stadium) %>%
+  mutate(stadium = fct_recode(stadium,
+                                        "AmFam Field" = "American Family Field",
+                                        "Guaranteed Rate" = "Guaranteed Rate Field",
+                                        "Camden Yards" = "Oriole Park at Camden Yards",
+                                        "Great American" = "Great American Ball Park",
+                                        "Citizens Bank" = "Citizens Bank Park"
+              )) %>%
+  summarize(lf_x = unique(wall_dist_lf_x), lf_y = unique(wall_dist_lf_y),
+            lflc_x = unique(wall_dist_lflc_x), lflc_y = unique(wall_dist_lflc_y),
+            lc_x = unique(wall_dist_lc_x), lc_y = unique(wall_dist_lc_y),
+            lccf_x = unique(wall_dist_lccf_x), lccf_y = unique(wall_dist_lccf_y),
+            cf_x = unique(wall_dist_cf_x), cf_y = unique(wall_dist_cf_y),
+            cfrc_x = unique(wall_dist_cfrc_x), cfrc_y = unique(wall_dist_cfrc_y),
+            rc_x = unique(wall_dist_rc_x), rc_y = unique(wall_dist_rc_y),
+            rcrf_x = unique(wall_dist_rcrf_x), rcrf_y = unique(wall_dist_rcrf_y),
+            rf_x = unique(wall_dist_rf_x), rf_y = unique(wall_dist_rf_y))
 
-of_catch_prob_2024 %>%
-  filter(stars <= 5) %>%
-  mutate(stars = as.factor(stars)) %>%
-  ggplot(aes(x = distance, y = hang_time, col = catch_rate)) +
-    geom_point(alpha = 0.1) +
-    facet_grid(rows = vars(wall), cols = vars(back))
+jan28_2 <- ggplot() +
+  geom_point(data = of_catch_prob_2024 %>% mutate(stadium = fct_recode(stadium,
+                                        "AmFam Field" = "American Family Field",
+                                        "Guaranteed Rate" = "Guaranteed Rate Field",
+                                        "Camden Yards" = "Oriole Park at Camden Yards",
+                                        "Great American" = "Great American Ball Park",
+                                        "Citizens Bank" = "Citizens Bank Park"
+              )), alpha = 0.05,
+             aes(x = landing_pos_x, y = landing_pos_y, col = closest_wall)) +
+  facet_wrap(~stadium) +
+  geom_text(data = df, aes(x = lf_x, y = lf_y),
+           fontface = "bold", label = "X") +
+  geom_text(data = df, aes(x = lflc_x, y = lflc_y),
+           fontface = "bold", label = "X") +
+  geom_text(data = df, aes(x = lc_x, y = lc_y),
+           fontface = "bold", label = "X") +
+  geom_text(data = df, aes(x = lccf_x, y = lccf_y),
+           fontface = "bold", label = "X") +
+  geom_text(data = df, aes(x = cf_x, y = cf_y),
+           fontface = "bold", label = "X") +
+  geom_text(data = df, aes(x = cfrc_x, y = cfrc_y),
+           fontface = "bold", label = "X") +
+  geom_text(data = df, aes(x = rc_x, y = rc_y),
+           fontface = "bold", label = "X") +
+  geom_text(data = df, aes(x = rcrf_x, y = rcrf_y),
+           fontface = "bold", label = "X") +
+  geom_text(data = df, aes(x = rf_x, y = rf_y),
+           fontface = "bold", label = "X") +
+  theme_bw() +
+  labs(title = "Nine wall distances for each MLB stadium",
+       x = "Horizontal distance from home plate (ft)",
+       y = "Vertical distance from home plate (ft)") +
+  scale_color_brewer(palette = "Set1") +
+  theme(legend.position = "none",
+        axis.title = element_text(face = "bold"),
+        title = element_text(face = "bold"),
+        plot.subtitle = element_text(face = "italic"),
+        strip.background = element_rect(fill = "wheat4", color = "gray10"),
+        strip.text = element_text(face = "bold", color = "white")) +
+        scale_x_continuous(breaks = c(-200, 0, 200)) +
+        scale_y_continuous(breaks = c(200, 400))
+
+jan28_2
+
+ggsave("../../figures/jan28_2.png", plot = jan28_2, height = 6, width = 8)
 ```
 
 
