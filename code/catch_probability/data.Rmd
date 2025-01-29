@@ -143,39 +143,68 @@ clean_of_catch_prob_data <- function(year) {
                                         "Truist Park" = "Truist (ex-SunTrust) Park"))
   of_catch_prob_teams_stadiums_dims <- of_catch_prob_teams_stadiums %>%
                                           left_join(dimensions_data, by = "stadium") %>%
+                                          mutate(wall_dist_lflc = 0.5 * (wall_dist_lf + wall_dist_lc),
+                                                 wall_dist_lccf = 0.5 * (wall_dist_lc + wall_dist_cf),
+                                                 wall_dist_cfrc = 0.5 * (wall_dist_cf + wall_dist_rc),
+                                                 wall_dist_rcrf = 0.5 * (wall_dist_rc + wall_dist_rf)) %>%
                                           mutate(wall_dist_lf_x = wall_dist_lf * cos((90 + 45) * pi / 180),
                                                  wall_dist_lf_y = wall_dist_lf * sin((90 + 45) * pi / 180),
+                                                 wall_dist_lflc_x = wall_dist_lflc * cos((90 + 33.75) * pi / 180),
+                                                 wall_dist_lflc_y = wall_dist_lflc * sin((90 + 33.75) * pi / 180),
                                                  wall_dist_lc_x = wall_dist_lc * cos((90 + 22.5) * pi / 180),
                                                  wall_dist_lc_y = wall_dist_lc * sin((90 + 22.5) * pi / 180),
+                                                 wall_dist_lccf_x = wall_dist_lccf * cos((90 + 11.25) * pi / 180),
+                                                 wall_dist_lccf_y = wall_dist_lccf * sin((90 + 11.25) * pi / 180),
                                                  wall_dist_cf_x = wall_dist_cf * cos((90 + 0) * pi / 180),
                                                  wall_dist_cf_y = wall_dist_cf * sin((90 + 0) * pi / 180),
+                                                 wall_dist_cfrc_x = wall_dist_cfrc * cos((90 - 11.25) * pi / 180),
+                                                 wall_dist_cfrc_y = wall_dist_cfrc * sin((90 - 11.25) * pi / 180),
                                                  wall_dist_rc_x = wall_dist_rc * cos((90 - 22.5) * pi / 180),
                                                  wall_dist_rc_y = wall_dist_rc * sin((90 - 22.5) * pi / 180),
+                                                 wall_dist_rcrf_x = wall_dist_rcrf * cos((90 - 33.75) * pi / 180),
+                                                 wall_dist_rcrf_y = wall_dist_rcrf * sin((90 - 33.75) * pi / 180),
                                                  wall_dist_rf_x = wall_dist_rf * cos((90 - 45) * pi / 180),
                                                  wall_dist_rf_y = wall_dist_rf * sin((90 - 45) * pi / 180)) %>%
                                           mutate(dist_to_lf = sqrt(
                                                    (landing_pos_x - wall_dist_lf_x)^2 + (landing_pos_y - wall_dist_lf_y)^2),
+                                                 dist_to_lflc = sqrt(
+                                                   (landing_pos_x - wall_dist_lflc_x)^2 + (landing_pos_y - wall_dist_lflc_y)^2),
                                                  dist_to_lc = sqrt(
                                                    (landing_pos_x - wall_dist_lc_x)^2 + (landing_pos_y - wall_dist_lc_y)^2),
+                                                 dist_to_lccf = sqrt(
+                                                   (landing_pos_x - wall_dist_lccf_x)^2 + (landing_pos_y - wall_dist_lccf_y)^2),
                                                  dist_to_cf = sqrt(
                                                    (landing_pos_x - wall_dist_cf_x)^2 + (landing_pos_y - wall_dist_cf_y)^2),
+                                                 dist_to_cfrc = sqrt(
+                                                   (landing_pos_x - wall_dist_cfrc_x)^2 + (landing_pos_y - wall_dist_cfrc_y)^2),
                                                  dist_to_rc = sqrt(
                                                    (landing_pos_x - wall_dist_rc_x)^2 + (landing_pos_y - wall_dist_rc_y)^2),
+                                                 dist_to_rcrf = sqrt(
+                                                   (landing_pos_x - wall_dist_rcrf_x)^2 + (landing_pos_y - wall_dist_rcrf_y)^2),
                                                  dist_to_rf = sqrt(
                                                    (landing_pos_x - wall_dist_rf_x)^2 + (landing_pos_y - wall_dist_rf_y)^2)) %>%
-                                          mutate(closest = pmin(dist_to_lf, dist_to_lc, dist_to_cf, dist_to_rc, dist_to_rf)) %>%
+                                          mutate(closest = pmin(dist_to_lf, dist_to_lflc, dist_to_lc, dist_to_lccf, dist_to_cf,
+                                                                dist_to_cfrc, dist_to_rc, dist_to_rcrf, dist_to_rf)) %>%
                                           mutate(relevant_wall_distance = case_when(
                                             dist_to_lf == closest ~ wall_dist_lf,
+                                            dist_to_lflc == closest ~ wall_dist_lflc,
                                             dist_to_lc == closest ~ wall_dist_lc,
+                                            dist_to_lccf == closest ~ wall_dist_lccf,
                                             dist_to_cf == closest ~ wall_dist_cf,
+                                            dist_to_cfrc == closest ~ wall_dist_cfrc,
                                             dist_to_rc == closest ~ wall_dist_rc,
+                                            dist_to_rcrf == closest ~ wall_dist_rcrf,
                                             dist_to_rf == closest ~ wall_dist_rf
                                           )) %>%
                                           mutate(closest_wall = as.factor(case_when(
                                             dist_to_lf == closest ~ "LF",
+                                            dist_to_lflc == closest ~ "LFLC",
                                             dist_to_lc == closest ~ "LC",
+                                            dist_to_lccf == closest ~ "LCCF",
                                             dist_to_cf == closest ~ "CF",
+                                            dist_to_cfrc == closest ~ "CFRC",
                                             dist_to_rc == closest ~ "RC",
+                                            dist_to_rcrf == closest ~ "RCRF",
                                             dist_to_rf == closest ~ "RF"
                                           ))) %>%
                                           select(-contains("norm_start_pos"),
