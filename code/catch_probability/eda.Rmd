@@ -31,7 +31,6 @@ of_catch_prob_2024 <- read_csv("../../data/of_catch_prob_2024.csv") %>%
                                player_id = as.factor(player_id),
                                pos = as.factor(pos),
                                route_direction = as.factor(route_direction),
-                               ball_section = as.factor(ball_section),
                                stadium = as.factor(stadium),
                                closest_wall = as.factor(closest_wall))
   
@@ -43,7 +42,6 @@ of_catch_prob_2023 <- read_csv("../../data/of_catch_prob_2023.csv") %>%
                                player_id = as.factor(player_id),
                                pos = as.factor(pos),
                                route_direction = as.factor(route_direction),
-                               ball_section = as.factor(ball_section),
                                stadium = as.factor(stadium),
                                closest_wall = as.factor(closest_wall))
 ```
@@ -365,7 +363,8 @@ ggsave("../../figures/jan17_2.png", plot = jan17_2, height = 6, width = 8)
 ```{r}
 stadium_dims <- of_catch_prob_2024 %>%
                   distinct(stadium, .keep_all = TRUE) %>%
-                  select(stadium, starts_with("wall_height"),
+                  select(stadium,
+                         wall_height_lf, wall_height_cf, wall_height_rf,
                          wall_dist_lf, wall_dist_lc, wall_dist_cf, wall_dist_rc, wall_dist_rf)
 
 pca <- prcomp(stadium_dims %>% select(-stadium), center = TRUE, scale = TRUE)
@@ -744,6 +743,60 @@ ggsave("../../figures/jan28_2.png", plot = jan28_2, height = 6, width = 8)
 of_catch_prob_2024 %>%
   mutate(wall_ball = as.factor(ifelse(relevant_wall_distance - ball_distance < 8, 1, 0))) %>%
   count(statcast = wall, me = wall_ball)
+```
+
+
+
+\newpage
+
+# January 30th
+
+```{r}
+jan30 <- of_catch_prob_2024 %>%
+  mutate(stadium = fct_recode(stadium,
+                                        "AmFam Field" = "American Family Field",
+                                        "Guaranteed Rate" = "Guaranteed Rate Field",
+                                        "Camden Yards" = "Oriole Park at Camden Yards",
+                                        "Great American" = "Great American Ball Park",
+                                        "Citizens Bank" = "Citizens Bank Park"
+              )) %>%
+  group_by(stadium) %>%
+  summarize(wall_height_lf = unique(wall_height_lf), wall_height_lflc = unique(wall_height_lflc),
+            wall_height_lc = unique(wall_height_lc), wall_height_lccf = unique(wall_height_lccf),
+            wall_height_cf = unique(wall_height_cf), wall_height_cfrc = unique(wall_height_cfrc),
+            wall_height_rc = unique(wall_height_rc), wall_height_rcrf = unique(wall_height_rcrf),
+            wall_height_rf = unique(wall_height_rf)) %>%
+  pivot_longer(cols = starts_with("wall_height"), names_prefix = "wall_height_",
+               names_to = "section", values_to = "height") %>%
+  mutate(section = fct_recode(as.factor(section),
+                              "LF" = "lf", "LFLC" = "lflc", "LC" = "lc",
+                              "LCCF" = "lccf", "CF" = "cf", "CFRC" = "cfrc",
+                              "RC" = "rc", "RCRF" = "rcrf", "RF" = "rf")) %>%
+  mutate(interpolated = as.factor(ifelse(
+    section %in% c("LF", "CF", "RF"), 0, 1
+  ))) %>%
+  ggplot(aes(x = factor(section,
+                        levels = c("LF", "LFLC", "LC", "LCCF", "CF",
+                                   "CFRC", "RC", "RCRF", "RF")), y = height)) +
+    geom_col(aes(fill = interpolated)) +
+    facet_wrap(~stadium) +
+    theme_bw() +
+    theme(legend.position = "none",
+          axis.title = element_text(face = "bold"),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          title = element_text(face = "bold"),
+          plot.subtitle = element_text(face = "italic"),
+          strip.background = element_rect(fill = "wheat4", color = "gray10"),
+          strip.text = element_text(face = "bold", color = "white")) +
+    labs(x = "Wall section", y = "Wall height (feet)",
+         title = "Outfield wall heights at MLB stadiums, 2024",
+         subtitle = "Measured heights are marked in teal, linearly interpolated heights are marked in gray") +
+    scale_fill_manual(values = c("turquoise3", "gray40"))
+
+jan30
+
+ggsave("../../figures/jan30.png", plot = jan30, height = 6, width = 8)
 ```
 
 
