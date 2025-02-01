@@ -1,0 +1,74 @@
+---
+title: "2025 word count"
+author: "Tim White"
+date: "January 2025"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      out.width = "75%", fig.align = "center")
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+
+# January 31st
+
+```{r}
+data <- read_csv("../../data/word_count.csv") %>%
+          mutate(weekday = as.factor(weekday),
+                 month = as.factor(month),
+                 words_cumulative = cumsum(words))
+```
+
+```{r}
+jan31 <- data %>%
+  ggplot(aes(x = day)) +
+    geom_line(aes(y = words_cumulative), col = "burlywood4", linewidth = 1.25) +
+    geom_point(aes(y = words_cumulative), shape = 21, stroke = 1.5, size = 2,
+               fill = "powderblue", col = "burlywood4") +
+    geom_line(aes(y = 200 * day), linetype = "dashed", linewidth = 0.75) +
+    scale_x_continuous(breaks = 1:30) +
+    ylim(c(0, 10000)) +
+    theme_bw() +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.major.x = element_blank()) +
+    labs(x = "Date", y = "Cumulative word count",
+         title = "Cumulative word count throughout January 2025",
+         subtitle = "Dashed line indicates a pace of 200 words per day") +
+    theme(axis.title = element_text(face = "bold"),
+          axis.text = element_text(face = "bold"),
+          plot.title = element_text(face = "bold"),
+          plot.subtitle = element_text(face = "italic"))
+
+jan31
+
+ggsave("../../figures/jan31.png", plot = jan31, height = 4, width = 6)
+```
+
+```{r}
+data %>%
+  group_by(month) %>%
+  summarize(min = min(words), mean = mean(words),
+            median = median(words), max = max(words))
+```
+
+```{r}
+data %>%
+  ggplot(aes(x = words)) + geom_histogram(bins = 7) + theme_classic()
+```
+
+```{r}
+data %>%
+  group_by(weekday) %>%
+  summarize(n = n(), mean = mean(words), stdev = sd(words)) %>%
+  arrange(desc(mean))
+```
+
+
+
+
