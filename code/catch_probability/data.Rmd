@@ -100,6 +100,7 @@ clean_of_catch_prob_data <- function(year) {
   of_catch_prob_teams <- teams %>% right_join(of_catch_prob, by = "player")
   
   stadiums <- mlb_schedule(season = year) %>%
+                distinct(game_pk, .keep_all = TRUE) %>%
                 mutate(game_pk = as.factor(game_pk),
                        stadium = as.factor(venue_name)) %>%
                 select(game_pk, stadium)
